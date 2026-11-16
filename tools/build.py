@@ -16,7 +16,7 @@ CAMPUS = 'songsim'  # 지금은 성심교정만. 교정이 늘면 교정별로 �
 D = lambda *p: os.path.join('data', 'campuses', CAMPUS, *p)
 MIME = {'jpg': 'image/jpeg', 'png': 'image/png'}
 BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-RESTRICTED = {'evidence-0.jpg', 'drawing.jpg'}  # 학교 사진·학교 도면 — 허락 전 공개 보류 (docs/SOURCES.md)
+RESTRICTED = {'evidence-0.jpg', 'drawing.jpg'}  # 학교 사진·학교 도면 — 허락 전 공개 보류, 비공개 저장소 cukmap/indoor 의 private/ 에 보관
 
 def data_url(path):
     return f"data:{MIME[path.rsplit('.', 1)[1]]};base64," + base64.b64encode(open(path, 'rb').read()).decode()
@@ -98,8 +98,8 @@ def build():
         tag = f'@@JSON:{k}@@'; assert page.count(tag) == 1, tag; page = page.replace(tag, dump(v))
     for name in set(re.findall(r'@@IMG:([^@]+)@@', page)):
         p = J(D(), 'images', name)
-        # 공개 보류 이미지는 배포본에 넣지 않고 빈 그림으로 대체
-        url = data_url(p) if os.path.exists(p) and not (PUBLIC and name in RESTRICTED) else BLANK
+        # 공개 보류 이미지는 배포본에 넣지 않고, 비공개 Worker(cukmap-indoor)에서 /private/ 로 받아 온다
+        url = (f'/private/{name}' if PUBLIC and name in RESTRICTED else data_url(p) if os.path.exists(p) else BLANK)
         page = page.replace(f'@@IMG:{name}@@', url)
     assert '@@IMG:' not in page and '@@JSON:' not in page
     page = page.replace('@@MAIN@@', main_script())
