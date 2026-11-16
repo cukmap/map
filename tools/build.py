@@ -1,14 +1,15 @@
-"""cukmap 빌드: data/campuses/<교정>/ · src/ · site/ 를 모아 dist/index.html 한 파일로 만든다.
+"""cukmap 빌드: data/campuses/<교정>/ · src/ · site/ 를 모아 한 파일짜리 지도를 만든다.
 
-사용: python3 tools/build.py            → dist/index.html
-      python3 tools/build.py --public   → 실내 데이터(공개 보류) 없이 빌드
-
-한 파일로 만드는 이유: 기존 사이트의 「오프라인 HTML」 내려받기를 그대로 유지하기 위해.
+  python3 tools/build.py              배포용 dist/ (Cloudflare Pages 가 이 명령을 돌린다)
+                                      실내 도면·학교 사진은 넣지 않고, 실내는 열 때 따로 받아 온다(site/config.json 의 indoorUrl)
+  python3 tools/build.py --offline    dist/index.html 한 파일에 실내까지 모두 넣음(내려받아 쓰는 사본, 실내 자료가 있는 컴퓨터에서만)
+  python3 tools/build.py --indoor     dist-indoor/ 실내 묶음(따로 올리는 비공개 저장소용, 실내 자료가 있는 컴퓨터에서만)
 """
 import os, sys, json, base64, glob
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PUBLIC = '--public' in sys.argv
+OFFLINE = '--offline' in sys.argv
+PUBLIC = not OFFLINE
 J = lambda *p: os.path.join(ROOT, *p)
 rj = lambda *p: json.load(open(J(*p), encoding='utf-8'))
 CAMPUS = 'songsim'  # 지금은 성심교정만. 교정이 늘면 교정별로 빌드
@@ -52,7 +53,6 @@ def network():
 
 def indoor():
     bs, rooms = [], {}
-    if PUBLIC: return {'buildings': []}, {}
     for slug in rj(D(), 'indoor-order.json'):
         base = J(D(), 'buildings', slug, 'indoor')
         if not os.path.isdir(base): continue
@@ -83,25 +83,45 @@ def main_script():
         out.append(t)
     return '\n'.join(out).replace('</script', '<\\/script')
 
+BOOT = """<script>(()=>{const run=()=>{for(const t of document.querySelectorAll('script.cukrun')){const s=document.createElement('script');s.textContent=t.textContent;document.body.appendChild(s)}};
+const url=%s;if(!url){run();return}const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);
+fetch(url,{signal:ac.signal}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.indoor){document.getElementById('indoor').textContent=JSON.stringify(j.indoor);document.getElementById('plan2d').textContent=JSON.stringify(j.plan2d||{})}}).catch(()=>{}).finally(()=>{clearTimeout(to);run()})})()</script>"""
+
 def build():
+    import re, shutil
     page = open(J('site', 'index.html'), encoding='utf-8').read()
-    ind, rooms = indoor()
+    ind, rooms = indoor() if OFFLINE else ({'buildings': []}, {})
     blocks = {'geo': geo(), 'net': network(), 'ext23': rj(D(), 'campus', 'site-edges.json'),
               'props26': rj(D(), 'campus', 'props.json'), 'roof26': roofs(),
               'v10model': rj(D(), 'legacy', 'v10model.json'), 'indoor': ind, 'plan2d': rooms}
     for k, v in blocks.items():
         tag = f'@@JSON:{k}@@'; assert page.count(tag) == 1, tag; page = page.replace(tag, dump(v))
-    import re
     for name in set(re.findall(r'@@IMG:([^@]+)@@', page)):
         p = J(D(), 'images', name)
-        # 공개 보류 이미지가 없는 저장소에서는 빈 그림으로 대체
+        # 공개 보류 이미지는 배포본에 넣지 않고 빈 그림으로 대체
         url = data_url(p) if os.path.exists(p) and not (PUBLIC and name in RESTRICTED) else BLANK
         page = page.replace(f'@@IMG:{name}@@', url)
     assert '@@IMG:' not in page and '@@JSON:' not in page
     page = page.replace('@@MAIN@@', main_script())
     os.makedirs(J('dist'), exist_ok=True)
+    if PUBLIC:
+        # 실내 묶음을 받은 뒤 지도 코드를 돌리도록, 이름 없는 스크립트를 미뤄 둔다
+        cfg = rj('site', 'config.json')
+        page = re.sub(r'<script>', '<script type="text/plain" class="cukrun">', page)
+        page = page.replace('</body>', BOOT % json.dumps(cfg.get('indoorUrl') or '') + '</body>')
+        for f in ('_headers',):
+            if os.path.exists(J('site', f)): shutil.copy(J('site', f), J('dist', f))
     open(J('dist', 'index.html'), 'w', encoding='utf-8').write(page)
-    print('dist/index.html', round(len(page) / 1e6, 2), 'MB', '(공개용: 실내 제외)' if PUBLIC else '')
+    print('dist/index.html', round(len(page) / 1e6, 2), 'MB', '(배포용)' if PUBLIC else '(오프라인 사본: 실내 포함)')
+
+def build_indoor():
+    ind, rooms = indoor(); assert ind['buildings'], '실내 자료가 없습니다'
+    out = J('dist-indoor'); os.makedirs(out, exist_ok=True)
+    t = json.dumps({'indoor': ind, 'plan2d': rooms}, ensure_ascii=False, separators=(',', ':'))
+    open(os.path.join(out, 'indoor.json'), 'w', encoding='utf-8').write(t)
+    open(os.path.join(out, '_headers'), 'w').write('/indoor.json\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=3600\n')
+    open(os.path.join(out, 'index.html'), 'w', encoding='utf-8').write('<!doctype html><meta charset="utf-8"><title>cukmap indoor</title><p>cukmap 실내 지도 데이터</p>')
+    print('dist-indoor/indoor.json', round(len(t) / 1e6, 2), 'MB')
 
 if __name__ == '__main__':
-    build()
+    build_indoor() if '--indoor' in sys.argv else build()

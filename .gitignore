@@ -6,3 +6,4 @@ __pycache__/
 data/campuses/*/buildings/*/indoor/
 data/campuses/*/images/evidence-*.jpg
 data/campuses/*/images/drawing.jpg
+dist-indoor/
