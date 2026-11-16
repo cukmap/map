@@ -1,0 +1,8 @@
+# 빌드 결과
+dist/
+__pycache__/
+
+# 공개 보류 — 학교 허락 전까지 저장소에 올리지 않음 (docs/SOURCES.md 참고)
+data/campuses/*/buildings/*/indoor/
+data/campuses/*/images/evidence-*.jpg
+data/campuses/*/images/drawing.jpg
