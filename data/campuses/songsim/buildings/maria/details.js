@@ -1,0 +1,10 @@
+ // 10) 마리아관: 동쪽 끝 북쪽 유리 계단탑(사용자) + (2026-11-10 사진) 옛 동 흰 골조, 새 동 서쪽 북면 유리 계단탑 + 출입구 포치(흰 콘크리트 판 + 붉은 벽돌 기둥)
+ {const b=bOf('M');if(b){const L=lvlOf(b),e=edgeAt(b,[152,8]),g=H(...e.c),top=L+13.2+1.5,brk=[.70,.36,.28];BX(e.c,e.ux,e.uz,4.2,3.4,g-.3,top,[.30,.48,.56],-.2);
+   for(let y=g+3.4;y<top;y+=3.3)BX(e.c,e.ux,e.uz,4.3,3.5,y,y+.12,[.80,.80,.80],-.25);for(const s of[-2.1,0,2.1])BX([e.c[0]+e.ux*s,e.c[1]+e.uz*s],e.ux,e.uz,.08,3.5,g-.3,top,[.75,.75,.75],-.25);
+   frameOn({poly:b.poly,spec:{datum:b.spec.datum,lift:b.spec.lift,parts:b.spec.parts.filter(p=>p.era!=='new'&&!(p.bottom>0))}},6.4,.5,white);
+   {/* 2026-11-11 인터넷 사진(나무위키): 마리아관 북측 = 붉은 벽돌 계단탑(지붕 위로 솟고 위가 비스듬) + 가운데 좁은 세로 유리 띠 + 위 '6 마리아관' 표지 */const m=[108.25,45.55],ux=.939,uz=-.343,g2=H(...m)-.3,t2=L+13.2+3.2;BX(m,ux,uz,6.9,5.4,g2,t2,brk,-4.1);const vx=uz,vz=-ux,P=(a,o,y)=>[m[0]+ux*a+vx*o,y,m[1]+uz*a+vz*o];quad(mesh,P(-3.45,1.3,t2),P(3.45,1.3,t2),P(3.45,-4.1,t2+2.2),P(-3.45,-4.1,t2+2.2),brk.map(v=>v*.9));quad(mesh,P(3.45,-4.1,t2+2.2),P(-3.45,-4.1,t2+2.2),P(-3.45,1.3,t2),P(3.45,1.3,t2),brk.map(v=>v*.9));for(const a of[-3.45,3.45]){const q=[P(a,1.3,t2),P(a,-4.1,t2+2.2),P(a,-4.1,t2)];pushTri(mesh,q[0],q[1],q[2],brk.map(v=>v*.85));pushTri(mesh,q[2],q[1],q[0],brk.map(v=>v*.85))}BX(m,ux,uz,2.4,.08,g2+.3,t2-2.6,[.30,.40,.46],1.3);for(let y=g2+.3;y<t2-2.6;y+=1.2)BX(m,ux,uz,2.5,.12,y,y+.06,[.20,.22,.24],1.32);for(const a of[-1.2,0,1.2])BX([m[0]+ux*a,m[1]+uz*a],ux,uz,.07,.14,g2+.3,t2-2.6,[.20,.22,.24],1.32);BX([m[0]-ux*.6,m[1]-uz*.6],ux,uz,1.8,.05,t2-2.1,t2-1.3,[.93,.93,.90],1.31)}
+   {const m=[100.75,53.4],ux=.938,uz=-.347,vx=uz,vz=-ux,W2=(a,o)=>[m[0]+ux*a+vx*o,m[1]+uz*a+vz*o],g2=H(...W2(0,4)),y0=Math.max(L,g2)+4.2;
+    BX(m,ux,uz,10.5,7.2,y0,y0+.7,white,0);BX(m,ux,uz,10.3,7.0,y0-.03,y0,[.86,.86,.84],0);
+    for(const a of[-4.6,4.6])BX(W2(a,6.4),ux,uz,1.1,1.1,g2-.3,y0,brk,-.55);
+    BX(m,ux,uz,6.5,.1,L-.05,L+3.1,[.20,.26,.30],.03);for(let s=-3.25;s<=3.26;s+=1.3)BX([m[0]+ux*s,m[1]+uz*s],ux,uz,.07,.14,L-.05,L+3.1,[.80,.80,.78],.03);
+    if(L>g2+.2){const n=Math.ceil((L-g2)/.16);for(let k=0;k<n;k++)BX(m,ux,uz,7,Math.max(.5,3.2-k*.32),g2-.2,g2+(k+1)*(L-g2)/n,[.70,.69,.66],0)}}}}

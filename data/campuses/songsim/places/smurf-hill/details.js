@@ -1,0 +1,7 @@
+ // 16) 스머프동산(하늘동산) (2026-11-11 나무위키 항공 사진): 트인 잔디 언덕(나무는 가장자리만), 남서쪽 동심원 생울타리 정원, 북쪽 끝 목재 노천 무대, 잔디 가장자리 나무 탁자
+ {const hed=[.22,.40,.22],wd=[.58,.40,.26],C=[37.5,10.5],g=H(...C);
+   for(const r of[6.2,4.4,2.6])for(let k=0;k<28;k++){const a0=k/28*6.283,a1=(k+1)/28*6.283;if(r<3&&k%7===0)continue;const p=[C[0]+Math.cos(a0)*r,C[1]+Math.sin(a0)*r],q=[C[0]+Math.cos(a1)*r,C[1]+Math.sin(a1)*r],m=[(p[0]+q[0])/2,(p[1]+q[1])/2],l=Math.hypot(q[0]-p[0],q[1]-p[1]);BX(m,(q[0]-p[0])/l,(q[1]-p[1])/l,l+.05,.7,H(...m)-.2,H(...m)+.9,hed,-.35)}
+   {const c=[48,-28],gy=H(...c);for(let k=0;k<10;k++){const a0=Math.PI*(k/10),a1=Math.PI*((k+1)/10),R=6,p=[c[0]+Math.cos(a0)*R,c[1]+Math.sin(a0)*R],q=[c[0]+Math.cos(a1)*R,c[1]+Math.sin(a1)*R];
+     for(const [A,Bq] of [[p,q]]){pushTri(mesh,[c[0],gy+.9,c[1]],[Bq[0],gy+.9,Bq[1]],[A[0],gy+.9,A[1]],wd);pushTri(mesh,[c[0],gy+.9,c[1]],[A[0],gy+.9,A[1]],[Bq[0],gy+.9,Bq[1]],wd);quad(mesh,[A[0],gy-.3,A[1]],[Bq[0],gy-.3,Bq[1]],[Bq[0],gy+.9,Bq[1]],[A[0],gy+.9,A[1]],wd.map(v=>v*.8));quad(mesh,[Bq[0],gy-.3,Bq[1]],[A[0],gy-.3,A[1]],[A[0],gy+.9,A[1]],[Bq[0],gy+.9,Bq[1]],wd.map(v=>v*.8))}}
+    BX(c,1,0,12.2,.2,gy-.3,gy+.9,wd.map(v=>v*.75),-.1)}
+   for(const [x,z] of [[30,-14],[31,-4],[60,-20],[63,-8],[62,2],[44,-24]]){const gy=H(x,z);BX([x,z],1,0,1.8,.8,gy+.7,gy+.78,wd,-.4);for(const o of[-.9,.9])BX([x,z+o],1,0,1.8,.3,gy+.42,gy+.48,wd,-.15);BX([x,z],1,0,.15,.15,gy-.1,gy+.7,wd.map(v=>v*.7),-.08)}}
