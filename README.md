@@ -15,7 +15,7 @@
 - `src/` 지도를 그리는 코드
 - `site/` 화면 뼈대
 - `tools/build.py` 보는 지도(`dist/index.html`)와 오류 제보 화면(`dist/edit/index.html`)으로 묶기
-- `worker/` Cloudflare Worker: 오류 제보 API(`/api/reports`), 비공개 자료 중계. 금지어·개인정보 검사는 `worker/filters.js`
+- `worker/` Cloudflare Worker: 오류 제보 API(`/api/reports`), 비공개 자료 중계. 제보 내용은 검사하지 않고 커뮤니티 신고로 숨긴다
 - `site/_headers` 보안 규칙(CSP): 지도 코드가 cukmap.com 밖으로 데이터를 보내거나 외부 스크립트를 불러오지 못하게 함
 
 ## 빌드

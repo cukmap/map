@@ -36,7 +36,7 @@ const st=document.createElement('style');st.textContent=`
 
 // ---------- 패널
 const ed=el('div');ed.id='ed';const head=el('div','edhead'),fold=el('button',null,'접기');head.append(el('b',null,'지도 오류 제보'),fold);
-const lead=el('p','edlead','지도에서 실제와 다른 곳을 찾으면 위치를 찍고 알려 주세요. 로그인 없이 누구나 할 수 있어요.');
+const lead=el('p','edlead','지도에서 실제와 다른 곳을 찾으면 위치를 찍고 알려 주세요. 로그인 없이 누구나 할 수 있어요. 부적절한 제보는 「부적절해요」가 3번 모이면 자동으로 숨겨져요.');
 const go=el('button','edgo','＋ 오류 제보하기'),note=el('div','ednote');
 const form=el('div','edform');form.hidden=true;
 const pick=el('div','edpick'),cats=el('div','edcats'),ta=el('textarea'),nick=el('input'),msg=el('div','edmsg'),row=el('div','edrow'),cancel=el('button',null,'취소'),send=el('button','edsend','보내기');
@@ -112,7 +112,7 @@ cancel.onclick=()=>{form.hidden=true;go.hidden=false;picking=false;draft=null;do
 send.onclick=async()=>{msg.textContent='';if(!draft){msg.textContent='먼저 지도에서 위치를 찍어 주세요.';return}const text=ta.value.trim();if(text.length<3){msg.textContent='내용을 조금 더 적어 주세요.';return}
  send.disabled=true;try{const b=draft.b;const j=await api('/api/reports',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({x:+draft.x.toFixed(2),z:+draft.z.toFixed(2),y:draft.y==null?null:+draft.y.toFixed(2),view:draft.view,bcode:b?b.code:'',bname:b?(b.name||'').split('(')[0].trim():'',floor:draft.floor||'',cat,text,nick:nick.value.trim()})});
   ta.value='';draft=null;form.hidden=true;go.hidden=false;
-  if(j.held){note.textContent=j.message;render()}else{note.textContent='제보가 등록됐어요. 고마워요!';reports.unshift(j.report);selId=j.report.id;filter='open';tOpen.click()}
+  note.textContent='제보가 등록됐어요. 고마워요!';reports.unshift(j.report);selId=j.report.id;filter='open';tOpen.click()
   setTimeout(()=>{note.textContent=''},6000)}catch(e){msg.textContent=e.message}finally{send.disabled=false}};
 
 // ---------- 핀

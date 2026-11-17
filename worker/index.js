@@ -1,8 +1,8 @@
 // cukmap 메인 Worker
 // - 지도 화면(dist/)은 정적 파일로 보낸다(이 코드를 거치지 않음).
 // - /indoor.json, /private/* : 비공개 Worker(cukmap-indoor)에서 받아 와 같은 주소로 건넨다.
-// - /api/reports : 오류 제보(게스트 가능, 글자만). 표는 첫 요청 때 자동으로 만든다.
-import { checkText } from './filters.js';
+// - /api/reports : 오류 제보(게스트 가능, 글자만). 내용 검사는 하지 않고, 「부적절해요」 신고가 모이면 자동으로 숨긴다.
+//   표는 첫 요청 때 자동으로 만든다.
 
 const CATS = ['building', 'path', 'entrance', 'indoor', 'name', 'other'];
 const HIDE_AT = 3;   // "부적절해요" 이만큼 모이면 자동으로 숨김
@@ -39,10 +39,9 @@ async function createReport(req, env) {
   // 사람이 아닌 프로그램의 도배만 막는다(10분에 30건 넘게)
   const recent = await env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE who = ? AND created > ?').bind(who, now - 600000).first();
   if (recent && recent.n >= 30) return json({ error: '잠시 후 다시 시도해 주세요.' }, 429);
-  const chk = checkText(text + ' ' + nick);
-  const r = await env.DB.prepare(`INSERT INTO reports (created, x, z, y, view, bcode, bname, floor, cat, text, nick, hidden, hide_reason, who) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING ${PUB}, hidden`)
-    .bind(now, x, z, isFinite(y) ? y : null, clean(b.view, 10), clean(b.bcode, 20), clean(b.bname, 60), clean(b.floor, 10), cat, text, nick, chk.ok ? 0 : 1, chk.ok ? null : chk.reason, who).first();
-  return json({ report: r, held: !chk.ok, message: chk.ok ? null : '확인이 필요한 표현이 있어 바로 보이지 않아요.' }, 201);
+  const r = await env.DB.prepare(`INSERT INTO reports (created, x, z, y, view, bcode, bname, floor, cat, text, nick, who) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING ${PUB}, hidden`)
+    .bind(now, x, z, isFinite(y) ? y : null, clean(b.view, 10), clean(b.bcode, 20), clean(b.bname, 60), clean(b.floor, 10), cat, text, nick, who).first();
+  return json({ report: r }, 201);
 }
 
 async function vote(req, env, id) {
