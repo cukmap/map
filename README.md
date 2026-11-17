@@ -26,6 +26,8 @@ python3 tools/build.py
 
 `dist/index.html`을 브라우저로 열면 된다.
 
-## 자료 출처
+## 자료 출처 · 라이선스
 
-[docs/SOURCES.md](docs/SOURCES.md)
+- 출처와 이용 조건: [docs/SOURCES.md](docs/SOURCES.md)
+- 코드는 MIT, 지도 데이터는 출처별 조건(OpenStreetMap 부분은 ODbL)을 따른다.
+- 자료에 문제가 있으면 [이슈](https://github.com/cukmap/map/issues)로 알려 주세요. 확인 후 바로 고치거나 내립니다.

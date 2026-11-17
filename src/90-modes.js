@@ -19,7 +19,7 @@ const grp=(label,ids)=>{const g=document.createElement('div');g.className='toolg
 grp('보기 설정',['contourBtn','orthoBtn','accBtn']);
 if(MODE==='edit')grp('대조 도구',['netBtn','detailBtn','satBtn']);
 else for(const id of ['netBtn','detailBtn','satBtn']){const x=$(id);if(x)x.style.display='none'}
-const nav=document.querySelector('.nav'),a=document.createElement('a');a.className='navlink'+(MODE==='view'?' hot':'');a.href=MODE==='view'?'/edit/':'/';a.textContent=MODE==='view'?'오류 제보':'메인 지도';nav.appendChild(a);
+const nav=document.querySelector('.nav'),a=document.createElement('a');a.className='navlink'+(MODE==='view'?' hot':'');a.href=MODE==='view'?'/edit/':'/';a.textContent=MODE==='view'?'오류 제보':'홈';nav.appendChild(a);
 if(MODE==='edit'){document.title='cukmap · 지도 오류 제보';const sub=document.querySelector('.top .sub');if(sub)sub.textContent='MAKE THE CUKMAP · 지도 오류 제보'}
 // 나침반: 오른쪽 버튼 줄 맨 아래로(버튼 수가 달라도 겹치지 않게)
 {const c=document.querySelector('.compass');if(c&&tools)tools.appendChild(c)}
