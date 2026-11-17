@@ -60,8 +60,28 @@ async function vote(req, env, id) {
   return json({ report: r, counted: !!ins.meta.changes });
 }
 
+// 기여자 목록: GitHub에서 받아 1시간 동안 저장해 두고 건넨다(방문자 브라우저가 GitHub에 직접 묻지 않게)
+const REPO = 'cukmap/map';
+async function contributors(env, ctx) {
+  const cache = caches.default, key = new Request('https://cukmap.internal/contributors-v1');
+  const hit = await cache.match(key); if (hit) return hit;
+  const h = { 'user-agent': 'cukmap-worker', accept: 'application/vnd.github+json' };
+  if (env.GITHUB_TOKEN) h.authorization = 'Bearer ' + env.GITHUB_TOKEN;
+  const r = await fetch(`https://api.github.com/repos/${REPO}/contributors?per_page=100`, { headers: h });
+  if (!r.ok) return json({ error: '목록을 불러오지 못했어요.' }, 502);
+  const list = (await r.json()).filter(u => u.type !== 'Bot').map(u => ({ login: u.login, commits: u.contributions, avatar: u.avatar_url ? u.avatar_url + (u.avatar_url.includes('?') ? '&' : '?') + 's=72' : null }));
+  const res = new Response(JSON.stringify({ contributors: list, at: Date.now() }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=3600' } });
+  ctx && ctx.waitUntil ? ctx.waitUntil(cache.put(key, res.clone())) : await cache.put(key, res.clone());
+  return res;
+}
+async function stats(env) {
+  const r = await env.DB.prepare(`SELECT COUNT(*) AS total, SUM(status = 'fixed') AS fixed, SUM(created > ?) AS month FROM reports WHERE hidden = 0`).bind(Date.now() - 30 * 86400000).first();
+  const total = r.total || 0, fixed = r.fixed || 0;
+  return json({ total, fixed, open: total - fixed, month: r.month || 0 });
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url), p = url.pathname;
     // 비공개 자료: 실내 묶음(/indoor.json), 학교 도면·사진(/private/*)
     if (p === '/indoor.json' || p.startsWith('/private/')) {
@@ -70,11 +90,13 @@ export default {
       const h = new Headers(r.headers); h.set('cache-control', 'public, max-age=3600');
       return new Response(r.body, { status: r.status, headers: h });
     }
+    if (p === '/api/contributors') { try { return await contributors(env, ctx); } catch (e) { return json({ error: '목록을 불러오지 못했어요.' }, 502); } }
     if (p.startsWith('/api/')) {
       if (!env.DB) return json({ error: '제보 저장소가 연결되지 않았어요.' }, 503);
       try {
         await ensure(env.DB);
         if (p === '/api/reports' && request.method === 'GET') return await listReports(env);
+        if (p === '/api/stats') return await stats(env);
         if (p === '/api/reports' && request.method === 'POST') return await createReport(request, env);
         const m = p.match(/^\/api\/reports\/(\d+)\/vote$/);
         if (m && request.method === 'POST') return await vote(request, env, +m[1]);

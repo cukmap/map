@@ -121,6 +121,9 @@ def build():
     os.makedirs(J('dist', 'edit'), exist_ok=True)
     open(J('dist', 'edit', 'index.html'), 'w', encoding='utf-8').write(ep)
     print('dist/edit/index.html (오류 제보 화면)')
+    # 함께 만든 사람들(/contributors/): 지도 없는 가벼운 쪽
+    os.makedirs(J('dist', 'contributors'), exist_ok=True)
+    shutil.copy(J('site', 'contributors.html'), J('dist', 'contributors', 'index.html'))
 
 def build_indoor():
     ind, rooms = indoor(); assert ind['buildings'], '실내 자료가 없습니다'

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cukmap · 함께 만든 사람들</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,"Malgun Gothic",sans-serif;background:#f4f7f3;color:#26392f;line-height:1.6}
+a{color:#244f3d}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 24px;background:#fff;border-bottom:1px solid #d9e2da}
+.brand{letter-spacing:2px;font-size:20px;font-weight:900;text-decoration:none;color:#1d3a2c}.brand span{font-weight:400}
+.top nav{display:flex;gap:6px}.top nav a{font-size:12px;text-decoration:none;border:1px solid #d7e2db;border-radius:9px;padding:9px 12px;background:#fff}
+.top nav a.hot{background:#e8552e;border-color:#e8552e;color:#fff}
+main{max-width:860px;margin:0 auto;padding:28px 20px 60px}
+h1{font-size:26px;margin:0 0 6px}.lead{color:#5b6f62;margin:0 0 26px}
+section{background:#fff;border:1px solid #dfe7e0;border-radius:14px;padding:18px 20px;margin-bottom:16px}
+h2{font-size:16px;margin:0 0 4px}.sub{color:#6b7a70;font-size:13px;margin:0 0 14px}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.person{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid #e6ece7;border-radius:10px;text-decoration:none;color:inherit}
+.person:hover{background:#f4f8f4}
+.person img,.person .ph{width:36px;height:36px;border-radius:50%;flex:none;background:#dfe9e1;display:grid;place-items:center;font-weight:800;color:#244f3d}
+.person b{display:block;font-size:13px;word-break:break-all}.person small{color:#6b7a70;font-size:11.5px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{flex:1;min-width:120px;border:1px solid #e6ece7;border-radius:10px;padding:10px 12px}
+.stat b{display:block;font-size:22px}.stat span{font-size:12px;color:#6b7a70}
+.empty{color:#7a8a80;font-size:13px}
+.go{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}.go a{text-decoration:none;border:1px solid #d7e2db;border-radius:9px;padding:9px 12px;font-size:13px;background:#fff}.go a.hot{background:#244f3d;color:#fff;border-color:#244f3d}
+ul{margin:0;padding-left:18px;font-size:13px;color:#3d4f44}
+.note{font-size:12.5px;color:#6b7a70;margin:8px 0 0}
+@media(max-width:600px){.top{padding:12px}.top nav a{padding:7px 9px;font-size:11px}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/">cuk<span>map</span></a><nav><a href="/">홈</a><a class="hot" href="/edit/">오류 제보</a></nav></header>
+<main>
+<h1>함께 만든 사람들</h1>
+<p class="lead">cukmap은 가톨릭대학교 지도를 여러 사람이 함께 고쳐 나가는 프로젝트(Make the CUKmap)예요.</p>
+
+<section>
+<h2>지도를 고친 사람들</h2>
+<p class="sub">GitHub에서 수정이 합쳐진 사람들이에요. 고친 횟수 순서예요.</p>
+<div class="people" id="people"><p class="empty">불러오는 중…</p></div>
+</section>
+
+<section>
+<h2>오류 제보</h2>
+<p class="sub">로그인 없이 누구나 남긴 제보예요.</p>
+<div class="stats">
+<div class="stat"><b id="sTotal">-</b><span>전체 제보</span></div>
+<div class="stat"><b id="sOpen">-</b><span>진행 중</span></div>
+<div class="stat"><b id="sFixed">-</b><span>해결됨</span></div>
+<div class="stat"><b id="sMonth">-</b><span>최근 30일</span></div>
+</div>
+</section>
+
+<section>
+<h2>참여하기</h2>
+<p class="sub">틀린 곳을 알려 주는 것만으로도 큰 도움이 돼요.</p>
+<div class="go"><a class="hot" href="/edit/">지도에서 오류 제보하기</a><a href="https://github.com/cukmap/map/blob/main/CONTRIBUTING.md">GitHub에서 직접 고치기</a></div>
+</section>
+
+<section>
+<h2>자료 출처</h2>
+<ul>
+<li>국토지리정보원 수치지도·정사영상</li>
+<li>© OpenStreetMap contributors (ODbL)</li>
+<li>가톨릭대학교 홈페이지 공개 자료(입찰공고 첨부 도면, 캠퍼스맵)</li>
+<li>건축물대장, 부천시 고시</li>
+</ul>
+<p class="note">자세한 출처와 이용 조건은 <a href="https://github.com/cukmap/map/blob/main/docs/SOURCES.md">자료 출처 문서</a>에 있어요. 2026년 키스톤디자인 수업에서 시작했고, AI 도구(Claude)와 함께 만들었어요.</p>
+</section>
+</main>
+<script>
+(()=>{const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+fetch('/api/contributors').then(r=>r.ok?r.json():Promise.reject()).then(j=>{const box=document.getElementById('people');box.textContent='';
+ const ps=(j.contributors||[]);if(!ps.length){box.appendChild(el('p','empty','아직 목록이 없어요.'));return}
+ for(const p of ps){const a=el('a','person');a.href='https://github.com/'+encodeURIComponent(p.login);a.target='_blank';a.rel='noopener';
+  if(p.avatar){const im=new Image();im.src=p.avatar;im.alt='';im.width=36;im.height=36;im.onerror=()=>im.replaceWith(el('span','ph',p.login[0].toUpperCase()));a.appendChild(im)}else a.appendChild(el('span','ph',p.login[0].toUpperCase()));
+  const t=el('span');t.append(el('b',null,p.login),el('small',null,'고친 횟수 '+p.commits));a.appendChild(t);box.appendChild(a)}})
+ .catch(()=>{const box=document.getElementById('people');box.textContent='';box.appendChild(el('p','empty','목록을 불러오지 못했어요. 잠시 후 새로고침해 주세요.'))});
+fetch('/api/stats').then(r=>r.ok?r.json():Promise.reject()).then(s=>{for(const [id,k] of [['sTotal','total'],['sOpen','open'],['sFixed','fixed'],['sMonth','month']])document.getElementById(id).textContent=s[k]??'-'}).catch(()=>{});
+})();
+</script>
+</body>
+</html>
