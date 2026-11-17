@@ -132,4 +132,10 @@ def build_indoor():
     print('dist-indoor/indoor.json', round(len(t) / 1e6, 2), 'MB')
 
 if __name__ == '__main__':
-    build_indoor() if '--indoor' in sys.argv else build()
+    if '--indoor' in sys.argv: build_indoor()
+    else:
+        # 데이터가 망가졌으면 배포하지 않는다(Cloudflare 빌드에서도 같은 검사)
+        import subprocess
+        if subprocess.run([sys.executable, J('tools', 'check.py')], stdout=subprocess.DEVNULL).returncode:
+            subprocess.run([sys.executable, J('tools', 'check.py')]); sys.exit('자동 검사를 통과하지 못해 지도를 만들지 않았어요.')
+        build()

@@ -1,0 +1,40 @@
+# 수정 제안(pull request)마다 지도가 정상으로 만들어지는지 자동으로 검사한다.
+# 비밀 값이나 쓰기 권한을 쓰지 않으므로, 다른 사람이 보낸 제안에서도 안전하게 돈다.
+name: 자동 검사
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  check:
+    name: 데이터 검사와 지도 만들기
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 바뀐 파일 찾기
+        id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD > changed.txt
+          else
+            git diff --name-only HEAD~1 HEAD > changed.txt || true
+          fi
+          cat changed.txt
+      - name: 데이터 검사
+        run: python3 tools/check.py --changed $(cat changed.txt)
+      - name: 지도 만들기
+        run: python3 tools/build.py
+      - name: 미리보기 파일 올리기
+        uses: actions/upload-artifact@v4
+        with:
+          name: cukmap-미리보기
+          path: dist/
+          retention-days: 14
