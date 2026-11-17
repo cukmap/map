@@ -39,7 +39,7 @@ function ctlUpdate(dt){
 function walkUpdate(dt){if(walker)return;if(globalThis.__INW){globalThis.__INWU(dt);return}const typing=document.activeElement&&['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName);
  const f=typing?0:(held.w||held.arrowup?1:0)-(held.s||held.arrowdown?1:0),sd=typing?0:(held.d||held.arrowright?1:0)-(held.a||held.arrowleft?1:0);
  if(!typing){if(held.q)camera.yaw-=1.8*dt;if(held.e)camera.yaw+=1.8*dt}
- const max=6.5,a=camera.yaw,tx=(Math.sin(a)*f+Math.cos(a)*sd),tz=(-Math.cos(a)*f+Math.sin(a)*sd),l=Math.hypot(tx,tz)||1,tv=[f||sd?tx/l*max:0,f||sd?tz/l*max:0],k=1-Math.exp(-dt*(f||sd?7:10));
+ const max=6.5*(globalThis.__WSPD||1)*(held.shift?2:1),a=camera.yaw,tx=(Math.sin(a)*f+Math.cos(a)*sd),tz=(-Math.cos(a)*f+Math.sin(a)*sd),l=Math.hypot(tx,tz)||1,tv=[f||sd?tx/l*max:0,f||sd?tz/l*max:0],k=1-Math.exp(-dt*(f||sd?7:10));
  CTL.walkV=[CTL.walkV[0]+(tv[0]-CTL.walkV[0])*k,CTL.walkV[1]+(tv[1]-CTL.walkV[1])*k];const vx=CTL.walkV[0]*dt,vz=CTL.walkV[1]*dt;if(Math.abs(vx)+Math.abs(vz)<1e-5)return;
  const blocked=(x,z)=>!TMASK_IJ((x+320)/4|0,(z+320)/4|0)||B.some(b=>inside(x,z,b.poly)&&!(b.holes||[]).some(h=>inside(x,z,h)));
  let x=camera.pos[0],z=camera.pos[2];if(!blocked(x+vx,z+vz)){x+=vx;z+=vz}else if(!blocked(x+vx,z)){x+=vx;CTL.walkV[1]=0}else if(!blocked(x,z+vz)){z+=vz;CTL.walkV[0]=0}else CTL.walkV=[0,0];camera.pos=[x,H(x,z)+1.8,z]}

@@ -45,7 +45,7 @@ let cat='building';for(const [k,n] of CATS){const b=el('button',null,n);b.datase
 row.append(cancel,send);form.append(pick,cats,ta,nick,msg,row);
 const tabs=el('div','edtabs'),tOpen=el('button','on','진행 중'),tFix=el('button',null,'해결됨');tabs.append(tOpen,tFix);
 const list=el('div','edlist');
-const foot=el('p','edfoot');foot.append('직접 고치고 싶다면 ');const gh=el('a',null,'GitHub');gh.href='https://github.com/cukmap/map';gh.target='_blank';gh.rel='noopener';foot.append(gh,'에서 수정을 제안해 주세요. 오른쪽 「대조 도구」로 도면·보행망과 비교해 볼 수 있어요.');
+const foot=el('p','edfoot');foot.append('직접 고치고 싶은 분을 위한 GitHub 저장소는 정리를 마치는 대로 공개할 예정이에요. 오른쪽 「대조 도구」로 도면·보행망과 비교해 볼 수 있어요.');
 ed.append(head,lead,go,note,form,tabs,list,foot);world.appendChild(ed);
 fold.onclick=()=>{ed.classList.toggle('fold');fold.textContent=ed.classList.contains('fold')?'펼치기':'접기'};
 const pins=el('div');pins.id='edpins';world.appendChild(pins);
