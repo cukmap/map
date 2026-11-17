@@ -5,5 +5,7 @@
   "compatibility_date": "2026-11-01",
   "assets": { "directory": "./dist", "binding": "ASSETS" },
   // 실내 데이터(비공개 저장소 cukmap/indoor 에서 배포되는 Worker)
-  "services": [{ "binding": "INDOOR", "service": "cukmap-indoor" }]
+  "services": [{ "binding": "INDOOR", "service": "cukmap-indoor" }],
+  // 오류 제보 저장(표는 첫 요청 때 worker/index.js 가 만든다)
+  "d1_databases": [{ "binding": "DB", "database_name": "cukmap-db", "database_id": "b9c5a523-74d2-45ac-bd23-eac1ea98be2c" }]
 }

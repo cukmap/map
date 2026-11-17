@@ -113,6 +113,14 @@ def build():
             if os.path.exists(J('site', f)): shutil.copy(J('site', f), J('dist', f))
     open(J('dist', 'index.html'), 'w', encoding='utf-8').write(page)
     print('dist/index.html', round(len(page) / 1e6, 2), 'MB', '(배포용)' if PUBLIC else '(오프라인 사본: 실내 포함)')
+    # Edit 화면(/edit/): 같은 지도 + 오류 제보. 맨 앞 스크립트에서 모드만 바꾼다
+    tag = '<script type="text/plain" class="cukrun">' if PUBLIC else '<script>'
+    ep = page.replace('<body>', '<body>' + tag + "globalThis.CUK_MODE='edit'</script>", 1)
+    ep = ep.replace('<title>cukmap · 성심교정 지도</title>', '<title>cukmap · 지도 오류 제보</title>', 1)
+    assert "CUK_MODE='edit'" in ep
+    os.makedirs(J('dist', 'edit'), exist_ok=True)
+    open(J('dist', 'edit', 'index.html'), 'w', encoding='utf-8').write(ep)
+    print('dist/edit/index.html (오류 제보 화면)')
 
 def build_indoor():
     ind, rooms = indoor(); assert ind['buildings'], '실내 자료가 없습니다'
