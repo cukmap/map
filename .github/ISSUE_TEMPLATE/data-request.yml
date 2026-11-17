@@ -1,0 +1,18 @@
+name: 자료 관련 요청
+description: 지도에 쓰인 자료의 수정·삭제를 요청해요(저작권, 개인정보, 보안 등).
+title: "[자료 요청] "
+labels: ["자료 요청"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 어떤 자료인가요?
+      description: 파일 이름이나 지도에서 보이는 위치를 알려 주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: 요청 내용과 이유
+    validations:
+      required: true

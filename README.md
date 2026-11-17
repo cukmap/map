@@ -4,6 +4,10 @@
 
 > 이 문서는 초안이다. 프로젝트를 시작한 이유와 앞으로의 방향(Make cukmap)은 만든 사람이 직접 쓴다.
 
+## 참여하기
+
+오류 제보는 [cukmap.com/edit](https://cukmap.com/edit/)에서 누구나, 직접 고치는 방법은 [참여 안내](CONTRIBUTING.md)에 있어요.
+
 ## 화면
 
 - `cukmap.com` 보는 지도 (입체 지도 · 지상 시점 · 평면 지도)

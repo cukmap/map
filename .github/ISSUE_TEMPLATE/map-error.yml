@@ -1,0 +1,25 @@
+name: 지도 오류
+description: 지도가 실제와 다른 곳을 알려 주세요.
+title: "[오류] "
+labels: ["지도 오류"]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: 어디인가요?
+      description: 건물 이름, 층, 장소 등 (cukmap.com/edit 에서 찍은 좌표가 있으면 같이 적어 주세요)
+      placeholder: 예) 니콜스관 3층 / 정문 앞 / x 270.5, z 88.1
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 무엇이 다른가요?
+      placeholder: 예) 지도에는 출입구가 남쪽에 있는데, 실제로는 북쪽 면에 있어요.
+    validations:
+      required: true
+  - type: input
+    id: evidence
+    attributes:
+      label: 근거 (선택)
+      placeholder: 예) 2026-11 현장 확인, 학교 홈페이지 사진

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 지도에서 바로 오류 제보하기 (로그인 없음)
+    url: https://cukmap.com/edit/
+    about: 지도에서 위치를 찍어 제보하는 게 가장 쉬워요.
