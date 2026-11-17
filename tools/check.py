@@ -79,8 +79,8 @@ def check_campus(cdir):
                         errors.append(f'`buildings/{slug}/building.json` {i + 1}번째 덩어리의 `"{k}"` 색은 `"#bf755e"` 같은 색상 코드로 적어 주세요.')
                 if P.get('win') is not None and P.get('win') not in ('punched', 'ribbon', 'slit', 'none'):
                     errors.append(f'`buildings/{slug}/building.json` {i + 1}번째 덩어리의 창 모양 `"win"`은 punched, ribbon, slit, none 중 하나여야 해요.')
-                for k in ('floors', 'height', 'base'):
-                    if P.get(k) is not None and not (isinstance(P[k], (int, float)) and 0 <= P[k] < 300):
+                for k, lo in (('floors', 0), ('height', 0), ('base', -50)):  # base 는 지하로 드러난 덩어리면 음수일 수 있음
+                    if P.get(k) is not None and not (isinstance(P[k], (int, float)) and lo <= P[k] < 300):
                         errors.append(f'`buildings/{slug}/building.json` {i + 1}번째 덩어리의 `"{k}"` 값이 숫자가 아니거나 범위를 벗어났어요.')
             for k in ('floors', 'h'):
                 if k in bj and bj[k] is not None and not (isinstance(bj[k], (int, float)) and 0 <= bj[k] < 300):
