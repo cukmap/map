@@ -28,12 +28,17 @@ def load(p):
     return None
 
 
-def strings(o):
-    if isinstance(o, str): yield o
+# 화면에 이름표로 그대로 나오는 칸만 검사한다(설명·메모 칸의 `<`, `>`는 괜찮음)
+SHOWN = {'name', 'nm', 'bn', 'label', 'title'}
+
+
+def strings(o, key=None):
+    if isinstance(o, str):
+        if key in SHOWN: yield o
     elif isinstance(o, dict):
-        for v in o.values(): yield from strings(v)
+        for k, v in o.items(): yield from strings(v, k)
     elif isinstance(o, list):
-        for v in o: yield from strings(v)
+        for v in o: yield from strings(v, key)
 
 
 def num(v): return isinstance(v, (int, float)) and not isinstance(v, bool) and abs(v) < LIMIT
@@ -47,10 +52,10 @@ def check_campus(cdir):
         d = load(p)
         if d is None: continue
         data[rel(p)] = d
-        # 화면에 글자로 들어가는 값에 꺾쇠(<, >)가 있으면 코드처럼 실행될 수 있어 막는다
+        # 이름표에 꺾쇠(<, >)가 있으면 화면에서 코드처럼 실행될 수 있어 막는다
         for s in strings(d):
             if '<' in s or '>' in s:
-                errors.append(f'`{rel(p)}` 안의 글자에 `<` 또는 `>`가 있어요: "{s[:40]}" — 이 기호는 쓸 수 없어요.'); break
+                errors.append(f'`{rel(p)}`의 이름 칸에 `<` 또는 `>`가 있어요: "{s[:40]}" — 이름에는 이 기호를 쓸 수 없어요.'); break
     B = lambda *a: os.path.join(cdir, *a)
     order = data.get(rel(B('buildings', 'order.json')))
     codes = set()
