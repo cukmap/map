@@ -629,35 +629,22 @@
     ],
     "height": 16.4,
     "floors": 4,
-    "base": 0.0,
-    "wall": [
-     0.9,
-     0.9,
-     0.87
-    ],
-    "trim": [
-     0.8,
-     0.81,
-     0.82
-    ],
-    "glass": [
-     0.2,
-     0.31,
-     0.38
-    ],
-    "win": "ribbon",
+    "base": 0,
+    "wall": "#dbd1bd",
+    "trim": "#ebe6db",
+    "glass": "#384c57",
+    "win": "punched",
     "pilotis": 0,
     "parapet": 0.9,
-    "roofColor": [
-     0.834,
-     0.869,
-     0.838
-    ],
+    "roofColor": "#d5ded6",
     "roofTex": [
      1.09,
      -0.16
     ],
-    "leanScore": 1.79
+    "leanScore": 1.79,
+    "pitch": 3,
+    "ww": 1.1,
+    "hf": 0.5
    },
    {
     "poly": [
@@ -963,35 +950,22 @@
     ],
     "height": 16.4,
     "floors": 4,
-    "base": 0.0,
-    "wall": [
-     0.9,
-     0.9,
-     0.87
-    ],
-    "trim": [
-     0.8,
-     0.81,
-     0.82
-    ],
-    "glass": [
-     0.2,
-     0.31,
-     0.38
-    ],
-    "win": "ribbon",
+    "base": 0,
+    "wall": "#dbd1bd",
+    "trim": "#ebe6db",
+    "glass": "#384c57",
+    "win": "punched",
     "pilotis": 0,
     "parapet": 0.9,
-    "roofColor": [
-     0.526,
-     0.547,
-     0.484
-    ],
+    "roofColor": "#868b7b",
     "roofTex": [
      1.09,
      -0.16
     ],
-    "leanScore": 1.79
+    "leanScore": 1.79,
+    "pitch": 3,
+    "ww": 1.1,
+    "hf": 0.5
    },
    {
     "poly": [
@@ -1117,36 +1091,23 @@
     ],
     "height": 16.4,
     "floors": 4,
-    "base": 0.0,
-    "wall": [
-     0.9,
-     0.9,
-     0.87
-    ],
-    "trim": [
-     0.8,
-     0.81,
-     0.82
-    ],
-    "glass": [
-     0.2,
-     0.31,
-     0.38
-    ],
-    "win": "ribbon",
+    "base": 0,
+    "wall": "#dbd1bd",
+    "trim": "#ebe6db",
+    "glass": "#384c57",
+    "win": "punched",
     "pilotis": 0,
     "parapet": 0.9,
-    "roofColor": [
-     0.867,
-     0.895,
-     0.87
-    ],
+    "roofColor": "#dde4de",
     "roofTex": [
      1.09,
      -0.16
     ],
     "leanScore": 1.79,
-    "bottom": 4.17
+    "bottom": 4.17,
+    "pitch": 3,
+    "ww": 1.1,
+    "hf": 0.5
    },
    {
     "poly": [
@@ -1218,36 +1179,23 @@
     ],
     "height": 16.4,
     "floors": 4,
-    "base": 0.0,
-    "wall": [
-     0.9,
-     0.9,
-     0.87
-    ],
-    "trim": [
-     0.8,
-     0.81,
-     0.82
-    ],
-    "glass": [
-     0.2,
-     0.31,
-     0.38
-    ],
-    "win": "ribbon",
+    "base": 0,
+    "wall": "#dbd1bd",
+    "trim": "#ebe6db",
+    "glass": "#384c57",
+    "win": "punched",
     "pilotis": 0,
     "parapet": 0.9,
-    "roofColor": [
-     0.559,
-     0.584,
-     0.524
-    ],
+    "roofColor": "#8f9586",
     "roofTex": [
      1.09,
      -0.16
     ],
     "leanScore": 1.79,
-    "bottom": 4.17
+    "bottom": 4.17,
+    "pitch": 3,
+    "ww": 1.1,
+    "hf": 0.5
    },
    {
     "poly": [
@@ -1301,38 +1249,26 @@
     ],
     "height": 36.8,
     "floors": 9,
-    "base": 0.0,
-    "wall": [
-     0.8,
-     0.81,
-     0.82
-    ],
-    "trim": [
-     0.9,
-     0.9,
-     0.87
-    ],
-    "glass": [
-     0.2,
-     0.31,
-     0.38
-    ],
-    "win": "punched",
+    "base": 0,
+    "wall": "#dbd1bd",
+    "trim": "#ebe6db",
+    "glass": "#3d525c",
+    "win": "slit",
     "pilotis": 0,
     "parapet": 0.9,
-    "roofColor": [
-     0.72,
-     0.7,
-     0.64
-    ],
+    "roofColor": "#b8b2a3",
     "roofTex": [
      5.01,
      -3.99
     ],
-    "leanScore": 6.07
+    "leanScore": 6.07,
+    "pitch": 3.4,
+    "ww": 0.9,
+    "hf": 0.62
    }
   ],
   "evidence": "건축물대장: 1~4층 1,197~1,676 m², 5~8층 479~500 m²(탑동), 높이 36.8 m; 탑동 위치는 NGII 2025 정사영상 지붕에서 추적 후 기울어짐(5.0, −4.0 m) 보정; 카카오맵 로드뷰(2025.12)·학교 공식 입체 캠퍼스맵: 밝은 회백색 | 2026-11-08 현장 사진: 정면 1층 필로티 출입구·관통 통로·남쪽 끝 열주 회랑 → 해당 구역 1층 비움",
   "lift": 0.67
- }
+ },
+ "photo": "학교 공식 사진: 베이지 석재 고층 탑 + 저층 동"
 }

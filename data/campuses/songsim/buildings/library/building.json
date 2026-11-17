@@ -959,32 +959,16 @@
       ]
      ]
     ],
-    "height": 16.5,
+    "height": 18.4,
     "floors": 5,
-    "base": 0.0,
-    "wall": [
-     0.9,
-     0.9,
-     0.87
-    ],
-    "trim": [
-     0.24,
-     0.46,
-     0.43
-    ],
-    "glass": [
-     0.2,
-     0.31,
-     0.38
-    ],
+    "base": 0,
+    "wall": "#e6e6e0",
+    "trim": "#ccccc7",
+    "glass": "#384c5c",
     "win": "punched",
     "pilotis": 0,
-    "parapet": 0.9,
-    "roofColor": [
-     0.581,
-     0.613,
-     0.564
-    ],
+    "parapet": 0.4,
+    "roofColor": "#949c90",
     "courtyardDepth": 3.3,
     "courtyardFloor": [
      [
@@ -1174,10 +1158,21 @@
      0.2,
      -0.8
     ],
-    "leanScore": 5.18
+    "leanScore": 5.18,
+    "pitch": 3.9,
+    "ww": 1.6,
+    "hf": 0.52
    }
   ],
   "evidence": "건축물대장 지상5층; 카카오맵 로드뷰(2025.12): 흰 타일 외벽·청록 처마띠·중앙 유리 현관",
-  "lift": 0.0
- }
+  "lift": 0,
+  "datum": 46.4
+ },
+ "lv": {
+  "datum": 46.4,
+  "fh": 3.6
+ },
+ "photo": "2026-10-31 현장 사진: 회색 석재 외벽·녹색 금속 모임지붕(깊은 처마)",
+ "photo26": "공식 사진: 흰 석재 격자 + 가운데 유리 커튼월, 녹색 모임지붕, 원형 출입구",
+ "photoRoof": true
 }

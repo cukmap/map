@@ -127,30 +127,14 @@
     ],
     "height": 9.9,
     "floors": 3,
-    "base": 0.0,
-    "wall": [
-     0.68,
-     0.41,
-     0.34
-    ],
-    "trim": [
-     0.9,
-     0.9,
-     0.87
-    ],
-    "glass": [
-     0.2,
-     0.31,
-     0.38
-    ],
+    "base": 0,
+    "wall": "#ad6957",
+    "trim": "#e6e6de",
+    "glass": "#334f61",
     "win": "punched",
     "pilotis": 0,
     "parapet": 0.9,
-    "roofColor": [
-     0.36,
-     0.47,
-     0.42
-    ],
+    "roofColor": "#5c786b",
     "roofTex": [
      1.09,
      1.09
@@ -159,6 +143,6 @@
    }
   ],
   "evidence": "NGII 1층",
-  "lift": 0.0
+  "lift": 0
  }
 }

@@ -72,6 +72,16 @@ def check_campus(cdir):
             poly = bj.get('poly') or []
             if len(poly) < 3 or not all(isinstance(q, list) and len(q) == 2 and num(q[0]) and num(q[1]) for q in poly):
                 errors.append(f'`buildings/{slug}/building.json`의 외곽(`"poly"`)이 올바른 좌표 목록이 아니에요.')
+            for i, P in enumerate((bj.get('spec') or {}).get('parts') or []):
+                for k in ('wall', 'trim', 'glass', 'roofColor'):
+                    v = P.get(k)
+                    if v is not None and not ((isinstance(v, str) and re.fullmatch(r'#[0-9a-fA-F]{6}', v)) or (isinstance(v, list) and len(v) == 3 and all(isinstance(c, (int, float)) and 0 <= c <= 1 for c in v))):
+                        errors.append(f'`buildings/{slug}/building.json` {i + 1}번째 덩어리의 `"{k}"` 색은 `"#bf755e"` 같은 색상 코드로 적어 주세요.')
+                if P.get('win') is not None and P.get('win') not in ('punched', 'ribbon', 'slit', 'none'):
+                    errors.append(f'`buildings/{slug}/building.json` {i + 1}번째 덩어리의 창 모양 `"win"`은 punched, ribbon, slit, none 중 하나여야 해요.')
+                for k in ('floors', 'height', 'base'):
+                    if P.get(k) is not None and not (isinstance(P[k], (int, float)) and 0 <= P[k] < 300):
+                        errors.append(f'`buildings/{slug}/building.json` {i + 1}번째 덩어리의 `"{k}"` 값이 숫자가 아니거나 범위를 벗어났어요.')
             for k in ('floors', 'h'):
                 if k in bj and bj[k] is not None and not (isinstance(bj[k], (int, float)) and 0 <= bj[k] < 300):
                     errors.append(f'`buildings/{slug}/building.json`의 `"{k}"` 값이 숫자가 아니거나 범위를 벗어났어요.')

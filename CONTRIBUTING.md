@@ -50,9 +50,12 @@ cukmap은 가톨릭대학교 지도를 여러 사람이 함께 고쳐 나가는 
 | 장소 이름 (정문, 성모동산 등) | `campus/places.json` | `"name"`: 이름, `"xy"`: 위치 `[x, z]` |
 | 출입구 위치·이름 | `network/nodes.json` | `"k": "entrance"`인 항목의 `"x"`, `"z"`, `"nm"`(이름), `"fl"`(층) |
 | 건물 이름 | `buildings/<건물>/building.json` | `"name"` |
+| 벽·테두리·유리·지붕 색 | `buildings/<건물>/building.json` | `"wall"`, `"trim"`, `"glass"`, `"roofColor"` — `"#bf755e"` 같은 색상 코드 |
+| 층수·높이 | `buildings/<건물>/building.json` | `"floors"`(층수)와 `"height"`(높이, m)를 함께 |
+| 창 모양 | `buildings/<건물>/building.json` | `"win"`: `"punched"` 개별창, `"ribbon"` 띠창, `"slit"` 세로 좁은 창 |
 
-건물 폴더 이름(예: `nichols` = 니콜스관)은 [docs/DATA.md](docs/DATA.md)의 표에 있어요.
-층수·높이·벽 색·창 모양은 지금 일부가 코드 안에 들어 있어서 정리 중이에요. 정리가 끝나면 이 표에 추가할게요.
+건물 폴더 이름(예: `nichols` = 니콜스관)과 각 값의 자세한 뜻은 [docs/DATA.md](docs/DATA.md)에 있어요.
+building.json 은 길어서, 브라우저에서 **Ctrl+F**로 `"wall"`처럼 찾고 싶은 값을 검색하면 빨라요. 한 건물이 여러 덩어리로 되어 있으면 같은 값이 여러 번 나와요(덩어리마다 하나씩).
 
 ### 좌표(x, z) 알아내기
 
