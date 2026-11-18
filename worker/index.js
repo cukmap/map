@@ -104,14 +104,11 @@ async function subdomain(request, env, ctx, name) {
   const out = new Headers(r.headers); out.set('x-cukmap-project', name);
   const loc = out.get('location');
   if (loc) { try { const L = new URL(loc, up); const pre = t.origin + t.pathname.replace(/\/$/, ''); if ((L.origin + L.pathname).startsWith(pre)) out.set('location', `https://${name}.cukmap.com` + (L.pathname.slice(pre.length - t.origin.length) || '/') + L.search); } catch (_) {} }
-  let res = new Response(r.body, { status: r.status, headers: out });
-  if ((out.get('content-type') || '').includes('text/html')) {
-    // 학교 공식 사이트로 오해하지 않게 모든 하위 주소에 표시를 붙인다
-    const bar = `<div style="position:fixed;left:8px;bottom:8px;z-index:2147483647;font:12px/1.4 system-ui,'Malgun Gothic',sans-serif;background:#fffffff2;border:1px solid #d7e2db;border-radius:8px;padding:4px 9px;color:#26392f;box-shadow:0 2px 8px #0002">cukmap 활용 프로젝트 · ${esc(e.title)} · ${esc(e.team)} · <a href="https://cukmap.com/projects/" style="color:#244f3d;font-weight:700" target="_blank" rel="noopener">cukmap</a></div>`;
-    res = new HTMLRewriter().on('body', { element(el) { el.append(bar, { html: true }); } }).transform(res);
-    if (request.method === 'GET' && env.DB) ctx.waitUntil((async () => { await ensure(env.DB); const day = new Date().toISOString().slice(0, 10);
+  const res = new Response(r.body, { status: r.status, headers: out });
+  // 하위 주소는 손대지 않고 그대로 전달한다(표시·꾸밈은 각 프로젝트 몫). 활용 프로젝트 목록의 인기순을 위해 방문 수만 센다
+  if ((out.get('content-type') || '').includes('text/html') && request.method === 'GET' && env.DB)
+    ctx.waitUntil((async () => { await ensure(env.DB); const day = new Date().toISOString().slice(0, 10);
       await env.DB.prepare('INSERT INTO project_visits (name, day, n) VALUES (?, ?, 1) ON CONFLICT(name, day) DO UPDATE SET n = n + 1').bind(name, day).run(); })().catch(() => {}));
-  }
   return res;
 }
 async function projects(env) {
