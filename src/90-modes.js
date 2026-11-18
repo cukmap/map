@@ -32,6 +32,6 @@ if(MODE==='edit'){document.title='cukmap · 지도 오류 제보';const sub=docu
  addEventListener('keydown',e=>{if(camera.mode!=='walk'||['INPUT','TEXTAREA','SELECT'].includes((document.activeElement||{}).tagName))return;const i={Digit1:0,Digit2:1,Digit3:2}[e.code];if(i!=null)set(SP[i][0])});
  setInterval(()=>w.classList.toggle('on',camera.mode==='walk'&&!globalThis.__INW&&!globalThis.__P2ON),300);}
 // 함께 만든 사람들 · 자료 출처 표시(OpenStreetMap 등 출처 표시 조건)
-{const c=document.createElement('div');c.id='cukcredit';c.innerHTML='<a href="/contributors/">함께 만든 사람들</a> · 자료: 국토지리정보원, © OpenStreetMap contributors';
+{const c=document.createElement('div');c.id='cukcredit';c.innerHTML='<a href="/projects/">활용 프로젝트</a> · <a href="/contributors/">함께 만든 사람들</a> · 자료: 국토지리정보원, © OpenStreetMap contributors';
  const cs=document.createElement('style');cs.textContent='#cukcredit{position:absolute;left:12px;bottom:10px;z-index:7;font-size:11px;color:#4d6355;background:#ffffffcc;border-radius:8px;padding:4px 8px}#cukcredit a{color:#244f3d;font-weight:700}.cukedit #cukcredit{display:none}@media(max-width:800px){#cukcredit{font-size:10px;bottom:6px;left:6px}}';
  document.head.appendChild(cs);$('gl').parentElement.appendChild(c)}}

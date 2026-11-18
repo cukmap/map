@@ -11,6 +11,7 @@
 ## 화면
 
 - `cukmap.com` 보는 지도 (입체 지도 · 지상 시점 · 평면 지도)
+- `cukmap.com/projects/` 활용 프로젝트 목록, `이름.cukmap.com` 하위 주소 — 신청은 [subdomains/](subdomains/README.md)에 파일 하나
 - `cukmap.com/contributors/` 함께 만든 사람들(GitHub 기여자, 제보 현황, 자료 출처)
 - `cukmap.com/embed/`, `cukmap.com/kit/v1/cukmap.js` 지도 부품: 내 사이트에 지도를 넣고 핀·층·보기를 다룸 → [docs/KIT.md](docs/KIT.md)
 - `cukmap.com/edit/` 지도 오류 제보 — 로그인 없이 누구나. 제보는 글자만 받고, 부적절 신고가 3번 모이면 자동으로 숨긴다. 「고쳐졌어요」가 2번 모이면 해결됨으로 옮긴다.

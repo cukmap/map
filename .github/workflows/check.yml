@@ -29,6 +29,9 @@ jobs:
           fi
           cat changed.txt
       - name: 데이터 검사
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: python3 tools/check.py --changed $(cat changed.txt)
       - name: 지도 만들기
         run: python3 tools/build.py

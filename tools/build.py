@@ -127,6 +127,17 @@ def build():
     open(J('dist', 'embed', 'index.html'), 'w', encoding='utf-8').write(kp)
     shutil.copytree(J('site', 'kit'), J('dist', 'kit'), dirs_exist_ok=True)
     print('dist/embed/index.html, dist/kit/v1/cukmap.js (지도 부품)')
+    # 하위 주소 목록(/_subdomains.json): Worker가 이름.cukmap.com 을 연결할 때, 프로젝트 목록이 보여 줄 때 씀
+    subs = {}
+    for p in sorted(glob.glob(J('subdomains', '*.json'))):
+        name = os.path.basename(p)[:-5]
+        if name.startswith('_'): continue
+        j = json.load(open(p, encoding='utf-8'))
+        subs[name] = {k: j.get(k) for k in ('target', 'title', 'description', 'team', 'github')}
+    pinned = rj('subdomains', '_pinned.json') if os.path.exists(J('subdomains', '_pinned.json')) else []
+    open(J('dist', '_subdomains.json'), 'w', encoding='utf-8').write(json.dumps({'subdomains': subs, 'pinned': pinned}, ensure_ascii=False))
+    os.makedirs(J('dist', 'projects'), exist_ok=True)
+    shutil.copy(J('site', 'projects.html'), J('dist', 'projects', 'index.html'))
     # 함께 만든 사람들(/contributors/): 지도 없는 가벼운 쪽
     os.makedirs(J('dist', 'contributors'), exist_ok=True)
     shutil.copy(J('site', 'contributors.html'), J('dist', 'contributors', 'index.html'))
