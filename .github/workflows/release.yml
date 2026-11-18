@@ -1,0 +1,27 @@
+# 고정판 만들기: 관리자가 v2026.11 같은 태그를 올리면, 그 시점의 지도(embed)와 부품을 묶어 GitHub 릴리스로 남긴다.
+# 다른 팀은 릴리스에서 파일을 받아 자기 사이트에 올리고 CUKmap.create(..., { src }) 로 쓰면 그 시점 지도로 고정된다.
+name: 고정판 릴리스
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 지도 만들기
+        run: python3 tools/build.py
+      - name: 묶기
+        run: |
+          mkdir -p out/cukmap-embed-${GITHUB_REF_NAME}
+          cp -r dist/embed dist/kit out/cukmap-embed-${GITHUB_REF_NAME}/
+          cd out && zip -qr cukmap-embed-${GITHUB_REF_NAME}.zip cukmap-embed-${GITHUB_REF_NAME}
+      - name: 릴리스 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" out/cukmap-embed-${GITHUB_REF_NAME}.zip --title "cukmap 고정판 $GITHUB_REF_NAME" --notes "이 시점의 지도 부품(embed)과 cukmap.js 입니다. docs/KIT.md 의 「최신판과 고정판」을 참고하세요. 실내 지도는 들어 있지 않아요."

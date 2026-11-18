@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cukmap 지도 부품 예시 · 강의실 안내</title>
+<style>
+body{margin:0;font-family:system-ui,"Malgun Gothic",sans-serif;display:grid;grid-template-columns:300px 1fr;height:100vh;color:#26392f}
+aside{padding:18px;border-right:1px solid #dfe7e0;overflow:auto}h1{font-size:18px;margin:0 0 4px}p{color:#5b6f62;font-size:13px}
+button{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border:1px solid #d7e2db;border-radius:10px;background:#fff;cursor:pointer;font-size:13px}
+button b{display:block}button small{color:#6b7a70}button:hover{background:#f2f7f2}
+.views{display:flex;gap:6px}.views button{text-align:center}#log{font-size:12px;color:#6b7a70;margin-top:10px}
+#map{min-height:300px}
+@media(max-width:700px){body{grid-template-columns:1fr;grid-template-rows:auto 60vh}}
+</style>
+</head>
+<body>
+<aside>
+<h1>강의실 안내 (예시)</h1>
+<p>cukmap 지도 부품으로 만든 예시예요. 아래 목록은 예시 데이터예요. 항목을 누르면 지도가 그 강의실로 이동해요.</p>
+<div id="list"></div>
+<div class="views"><button data-v="2d">평면</button><button data-v="3d">입체</button></div>
+<div id="log">지도를 누르면 그 위치가 여기에 나와요.</div>
+</aside>
+<div id="map"></div>
+<script src="https://cukmap.com/kit/v1/cukmap.js"></script>
+<script>
+const ROOMS = [
+  { id: 'a', room: 'N301', label: '예시 A학과 OT', when: '10:00' },
+  { id: 'b', room: 'B338', label: '예시 B학과 OT', when: '11:00' },
+  { id: 'c', building: '다솔관', label: '예시 C학과 집합 장소', when: '13:00' }
+];
+CUKmap.create('#map', { view: '2d' }).then(async map => {
+  const list = document.getElementById('list');
+  for (const r of ROOMS) {
+    try { await map.addPin(r); } catch (e) { console.warn(e.message); continue; }
+    const b = document.createElement('button');
+    b.innerHTML = '<b></b><small></small>';
+    b.querySelector('b').textContent = r.label;
+    b.querySelector('small').textContent = r.when + ' · ' + (r.room || r.building);
+    b.onclick = () => { map.focus(r.room ? { room: r.room } : { building: r.building }); map.selectPin(r.id); };
+    list.appendChild(b);
+  }
+  document.querySelectorAll('[data-v]').forEach(b => b.onclick = () => map.setView(b.dataset.v));
+  map.on('click', e => { document.getElementById('log').textContent = `x ${e.x}, z ${e.z}` + (e.building ? ` · ${e.building.name}${e.floor ? ' ' + e.floor : ''}` : ''); });
+  map.on('pinClick', e => { document.getElementById('log').textContent = '핀: ' + e.id; });
+});
+</script>
+</body>
+</html>

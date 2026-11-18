@@ -36,7 +36,7 @@ def geo():
              'campusInherited': 'boundary-inherited', 'vegetation': 'vegetation'}
     out = {}
     for k in order:
-        if k == 'buildings': out[k] = [rj(D(), 'buildings', b, 'building.json') for b in building_dirs()]
+        if k == 'buildings': out[k] = [dict(rj(D(), 'buildings', b, 'building.json'), id=b) for b in building_dirs()]  # id = 폴더 이름(지도 부품에서 건물을 가리킬 때 씀)
         elif k in files: out[k] = rj(D(), 'campus', files[k] + '.json')
         else: out[k] = meta[k]
     return out
@@ -121,6 +121,12 @@ def build():
     os.makedirs(J('dist', 'edit'), exist_ok=True)
     open(J('dist', 'edit', 'index.html'), 'w', encoding='utf-8').write(ep)
     print('dist/edit/index.html (오류 제보 화면)')
+    # 지도 부품(/embed/ + /kit/v1/cukmap.js): 다른 사이트에 넣는 지도
+    kp = page.replace('<body>', '<body>' + tag + "globalThis.CUK_MODE='embed'</script>", 1)
+    os.makedirs(J('dist', 'embed'), exist_ok=True)
+    open(J('dist', 'embed', 'index.html'), 'w', encoding='utf-8').write(kp)
+    shutil.copytree(J('site', 'kit'), J('dist', 'kit'), dirs_exist_ok=True)
+    print('dist/embed/index.html, dist/kit/v1/cukmap.js (지도 부품)')
     # 함께 만든 사람들(/contributors/): 지도 없는 가벼운 쪽
     os.makedirs(J('dist', 'contributors'), exist_ok=True)
     shutil.copy(J('site', 'contributors.html'), J('dist', 'contributors', 'index.html'))
