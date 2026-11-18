@@ -3,7 +3,8 @@
   "name": "cukmap-map",
   "main": "worker/index.js",
   "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./dist", "binding": "ASSETS" },
+  // run_worker_first: 하위 주소(이름.cukmap.com)를 가려내려면 파일보다 Worker 코드가 먼저 돌아야 한다
+  "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": true },
   // 실내 데이터(비공개 저장소 cukmap/indoor 에서 배포되는 Worker)
   "services": [{ "binding": "INDOOR", "service": "cukmap-indoor" }],
   // 오류 제보 저장(표는 첫 요청 때 worker/index.js 가 만든다)
