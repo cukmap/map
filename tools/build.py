@@ -101,9 +101,27 @@ def open_data():
     meta = {'campus': 'songsim', 'note': NOTE}
     return {'buildings': {**meta, 'buildings': bs}, 'places': {**meta, 'places': places}, 'entrances': {**meta, 'entrances': ents}}
 
-BOOT = """<script>(()=>{const run=()=>{for(const t of document.querySelectorAll('script.cukrun')){const s=document.createElement('script');s.textContent=t.textContent;document.body.appendChild(s)}};
-const url=%s;if(!url){run();return}const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);
-fetch(url,{signal:ac.signal}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.indoor){document.getElementById('indoor').textContent=JSON.stringify(j.indoor);document.getElementById('plan2d').textContent=JSON.stringify(j.plan2d||{})}}).catch(()=>{}).finally(()=>{clearTimeout(to);run()})})()</script>"""
+# 처음 화면: 큰 파일을 받는 동안 빈 화면 대신 진행 상황을 보여 준다(배포본에만)
+LOADER = ('<div id="cukload" style="position:fixed;inset:0;z-index:9999;background:#f4f7f3;display:flex;flex-direction:column;align-items:center;'
+          'justify-content:center;gap:12px;font-family:system-ui,\'Malgun Gothic\',sans-serif;color:#244f3d;transition:opacity .4s">'
+          '<div style="font-size:30px;font-weight:900;letter-spacing:2px">cuk<span style="font-weight:400">map</span></div>'
+          '<div id="cukloadmsg" style="font-size:13px;color:#55705c">지도를 불러오는 중이에요…</div>'
+          '<div style="width:220px;height:6px;background:#dfe9e1;border-radius:3px;overflow:hidden">'
+          '<i id="cukloadbar" style="display:block;height:100%;width:6%;background:#244f3d;border-radius:3px;transition:width .3s"></i></div>'
+          '<button id="cukloadskip" style="display:none;margin-top:6px;font:inherit;font-size:12px;color:#244f3d;background:#fff;'
+          'border:1px solid #cfdcd2;border-radius:9px;padding:8px 12px;cursor:pointer">실내 지도 없이 먼저 보기</button></div>')
+
+# 실내 묶음을 받은 뒤 지도 코드를 돌린다. 받는 동안 진행률을 보여 주고, 오래 걸리면 「실내 없이 먼저 보기」를 띄운다
+BOOT = """<script>(()=>{const L=i=>document.getElementById(i),msg=t=>{const m=L('cukloadmsg');if(m)m.textContent=t},bar=p=>{const b=L('cukloadbar');if(b)b.style.width=Math.max(6,Math.min(100,p))+'%'};
+let ran=false;const run=()=>{if(ran)return;ran=true;msg('지도를 그리는 중이에요…');bar(100);setTimeout(()=>{for(const t of document.querySelectorAll('script.cukrun')){const s=document.createElement('script');s.textContent=t.textContent;document.body.appendChild(s)}
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{const o=L('cukload');if(o){o.style.opacity=0;setTimeout(()=>o.remove(),450)}}))},30)};
+const url=@@URL@@;if(!url){run();return}const ac=new AbortController(),skip=L('cukloadskip');
+const st=setTimeout(()=>{if(skip){skip.style.display='block';skip.onclick=()=>{ac.abort();run()}}},6000),hard=setTimeout(()=>ac.abort(),90000);
+msg('실내 지도를 받는 중이에요…');bar(10);
+fetch(url,{signal:ac.signal}).then(async r=>{if(!r.ok)return null;const tot=+r.headers.get('x-cuk-size')||0,rd=r.body.getReader(),parts=[];let n=0;
+ for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);n+=value.length;const mb=(n/1048576).toFixed(1);if(tot){bar(10+n/tot*85);msg('실내 지도를 받는 중이에요… '+mb+' / '+(tot/1048576).toFixed(1)+' MB')}else{bar(10+85*(1-Math.exp(-n/4e6)));msg('실내 지도를 받는 중이에요… '+mb+' MB')}}
+ const buf=new Uint8Array(n);let o=0;for(const p of parts){buf.set(p,o);o+=p.length}return JSON.parse(new TextDecoder().decode(buf))})
+ .then(j=>{if(!ran&&j&&j.indoor){L('indoor').textContent=JSON.stringify(j.indoor);L('plan2d').textContent=JSON.stringify(j.plan2d||{})}}).catch(()=>{}).finally(()=>{clearTimeout(st);clearTimeout(hard);run()})})()</script>"""
 
 def build():
     import re, shutil
@@ -126,7 +144,8 @@ def build():
         # 실내 묶음을 받은 뒤 지도 코드를 돌리도록, 이름 없는 스크립트를 미뤄 둔다
         cfg = rj('site', 'config.json')
         page = re.sub(r'<script>', '<script type="text/plain" class="cukrun">', page)
-        page = page.replace('</body>', BOOT % json.dumps(cfg.get('indoorUrl') or '') + '</body>')
+        page = page.replace('</body>', BOOT.replace('@@URL@@', json.dumps(cfg.get('indoorUrl') or '')) + '</body>')
+        page = page.replace('<body>', '<body>' + LOADER, 1)
         for f in ('_headers',):
             if os.path.exists(J('site', f)): shutil.copy(J('site', f), J('dist', f))
     open(J('dist', 'index.html'), 'w', encoding='utf-8').write(page)

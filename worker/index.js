@@ -129,7 +129,9 @@ export default {
     if (p === '/indoor.json' || p.startsWith('/private/')) {
       if (!env.INDOOR) return new Response('indoor not configured', { status: 404 });
       const r = await env.INDOOR.fetch(new Request(new URL(p, 'https://indoor.internal'), request));
-      const h = new Headers(r.headers); h.set('cache-control', 'public, max-age=3600');
+      const h = new Headers(r.headers); h.set('cache-control', 'public, max-age=86400, stale-while-revalidate=604800');
+      // 진행률 표시용: 압축 전 크기(브라우저가 풀어서 세는 바이트와 같은 기준)
+      const len = r.headers.get('content-length'); if (len) h.set('x-cuk-size', len);
       return new Response(r.body, { status: r.status, headers: h });
     }
     if (p === '/api/contributors') { try { return await contributors(env, ctx); } catch (e) { return json({ error: '목록을 불러오지 못했어요.' }, 502); } }
