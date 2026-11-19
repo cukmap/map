@@ -14,7 +14,7 @@ const st=document.createElement('style');st.textContent=`
 .edlead{margin:0 14px 10px;color:#5b6f62;line-height:1.5}
 .edgo{margin:0 14px 10px;background:#e8552e!important;border-color:#e8552e!important;color:#fff!important;font-weight:800}
 .edform{margin:0 14px 10px;padding:10px;border:1px solid #f0c9b9;background:#fff8f4;border-radius:10px;display:flex;flex-direction:column;gap:8px}
-.edpick{font-weight:700;color:#c2401c;line-height:1.4}.edxy{font-weight:400;font-size:11px;color:#6b7a70;margin-top:3px}.edxy button{font-size:10.5px;padding:2px 7px}.edpick.ok{color:#26392f}.edpick button{margin-left:6px;font-size:11px;padding:3px 8px}
+.edpick{font-weight:700;color:#c2401c;line-height:1.4}.edxy{font-weight:400;font-size:11px;color:#6b7a70;margin-top:3px}.edxy button{font-size:10.5px;padding:2px 7px}.edpick.ok{color:#26392f}.edfix{display:block;font-weight:400;font-size:11px;color:#244f3d;margin-top:4px}.edpick button{margin-left:6px;font-size:11px;padding:3px 8px}
 .edcats{display:flex;flex-wrap:wrap;gap:5px}.edcats button{font-size:11px;padding:5px 8px}
 .edform textarea{min-height:76px;resize:vertical;border:1px solid #d7e2db;border-radius:8px;padding:8px;font:inherit}
 .edform input{border:1px solid #d7e2db;border-radius:8px;padding:7px 8px;font:inherit}
@@ -83,7 +83,10 @@ world.addEventListener('pointerup',e=>{if(!picking||!downAt||e.target.closest('#
  const p=globalThis.__P2ON?pickPlan(e.clientX,e.clientY):pick3d(e.clientX,e.clientY);if(!p)return;e.stopPropagation();e.preventDefault();setDraft(p)},true);
 function setDraft(p){draft=p;picking=false;document.body.classList.remove('edpicking');pick.textContent='';pick.classList.add('ok');
  const nm=p.b?(p.b.name||'').split('(')[0].trim():'';pick.append('위치: '+([nm,p.floor?IFN(p.floor):''].filter(Boolean).join(' ')||'건물 밖')+' ');const re=el('button',null,'다시 찍기');re.onclick=startPick;pick.appendChild(re);
- const xy=`x ${p.x.toFixed(1)}, z ${p.z.toFixed(1)}`,co=el('div','edxy','좌표 '+xy+(p.y!=null?` · 높이 ${p.y.toFixed(1)} m`:'')+' ');const cp=el('button',null,'복사');cp.onclick=()=>{try{navigator.clipboard.writeText(`[${p.x.toFixed(2)}, ${p.z.toFixed(2)}]`);cp.textContent='복사됨'}catch(e){}};co.appendChild(cp);pick.appendChild(co);drawPins(true)}
+ const xy=`x ${p.x.toFixed(1)}, z ${p.z.toFixed(1)}`,co=el('div','edxy','좌표 '+xy+(p.y!=null?` · 높이 ${p.y.toFixed(1)} m`:'')+' ');const cp=el('button',null,'복사');cp.onclick=()=>{try{navigator.clipboard.writeText(`[${p.x.toFixed(2)}, ${p.z.toFixed(2)}]`);cp.textContent='복사됨'}catch(e){}};co.appendChild(cp);pick.appendChild(co);
+ // 직접 고칠 사람을 위해: 이 건물의 값 파일을 GitHub 편집 화면으로 바로 연다(설명서: docs/FIX.md)
+ if(p.b&&p.b.id){const fx=el('a','edfix','이 건물 값을 GitHub에서 직접 고치기 ↗');fx.href='https://github.com/cukmap/map/edit/main/data/campuses/songsim/buildings/'+encodeURIComponent(p.b.id)+'/building.json';fx.target='_blank';fx.rel='noopener';pick.appendChild(fx)}
+ drawPins(true)}
 function startPick(){picking=true;draft=null;document.body.classList.add('edpicking');pick.classList.remove('ok');pick.textContent='지도에서 틀린 위치를 눌러 주세요. (드래그하면 지도를 움직일 수 있어요)';drawPins(true)}
 go.onclick=()=>{form.hidden=false;go.hidden=true;msg.textContent='';note.textContent='';startPick();ta.focus()};
 cancel.onclick=()=>{form.hidden=true;go.hidden=false;picking=false;draft=null;document.body.classList.remove('edpicking');drawPins(true)};
