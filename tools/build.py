@@ -21,6 +21,13 @@ RESTRICTED = {'evidence-0.jpg', 'drawing.jpg'}  # 학교 사진·학교 도면 �
 def data_url(path):
     return f"data:{MIME[path.rsplit('.', 1)[1]]};base64," + base64.b64encode(open(path, 'rb').read()).decode()
 
+def img_file(p):
+    import hashlib, shutil
+    h = hashlib.sha1(open(p, 'rb').read()).hexdigest()[:10]
+    name = os.path.basename(p).replace('.', f'.{h}.', 1)
+    os.makedirs(J('dist', 'img'), exist_ok=True); shutil.copy(p, J('dist', 'img', name))
+    return f'/img/{name}'
+
 def dump(obj):
     # HTML <script> 안에 넣으므로 </ 를 끊어 둔다
     return json.dumps(obj, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
@@ -105,7 +112,7 @@ def open_data():
 LOADER = ('<div id="cukload" style="position:fixed;inset:0;z-index:9999;background:#f4f7f3;display:flex;flex-direction:column;align-items:center;'
           'justify-content:center;gap:12px;font-family:system-ui,\'Malgun Gothic\',sans-serif;color:#244f3d;transition:opacity .4s">'
           '<div style="font-size:30px;font-weight:900;letter-spacing:2px">cuk<span style="font-weight:400">map</span></div>'
-          '<div id="cukloadmsg" style="font-size:13px;color:#55705c">지도를 불러오는 중이에요…</div>'
+          '<div id="cukloadmsg" style="font-size:13px;color:#55705c">지도를 받는 중이에요…</div>'
           '<div style="width:220px;height:6px;background:#dfe9e1;border-radius:3px;overflow:hidden">'
           '<i id="cukloadbar" style="display:block;height:100%;width:6%;background:#244f3d;border-radius:3px;transition:width .3s"></i></div>'
           '<button id="cukloadskip" style="display:none;margin-top:6px;font:inherit;font-size:12px;color:#244f3d;background:#fff;'
@@ -113,13 +120,15 @@ LOADER = ('<div id="cukload" style="position:fixed;inset:0;z-index:9999;backgrou
 
 # 실내 묶음을 받은 뒤 지도 코드를 돌린다. 받는 동안 진행률을 보여 주고, 오래 걸리면 「실내 없이 먼저 보기」를 띄운다
 BOOT = """<script>(()=>{const L=i=>document.getElementById(i),msg=t=>{const m=L('cukloadmsg');if(m)m.textContent=t},bar=p=>{const b=L('cukloadbar');if(b)b.style.width=Math.max(6,Math.min(100,p))+'%'};
-let ran=false;const run=()=>{if(ran)return;ran=true;msg('지도를 그리는 중이에요…');bar(100);setTimeout(()=>{for(const t of document.querySelectorAll('script.cukrun')){const s=document.createElement('script');s.textContent=t.textContent;document.body.appendChild(s)}
- requestAnimationFrame(()=>requestAnimationFrame(()=>{const o=L('cukload');if(o){o.style.opacity=0;setTimeout(()=>o.remove(),450)}}))},30)};
+const hide=()=>{const o=L('cukload');if(o&&!o.dataset.out){o.dataset.out=1;o.style.opacity=0;setTimeout(()=>o.remove(),450)}};
+const imgs=['groundTexture','matidTexture'].map(L).filter(Boolean),imgsReady=()=>imgs.every(i=>i.complete&&i.naturalWidth);
+let ran=false;const run=()=>{if(ran)return;ran=true;msg('지도를 그리는 중이에요…');bar(92);setTimeout(()=>{for(const t of document.querySelectorAll('script.cukrun')){const s=document.createElement('script');s.textContent=t.textContent;document.body.appendChild(s)}
+ const t0=Date.now();(function wait(){if(imgsReady()||Date.now()-t0>8000){bar(100);requestAnimationFrame(()=>requestAnimationFrame(hide))}else{msg('지면 사진을 받는 중이에요…');setTimeout(wait,150)}})()},30)};
 const url=@@URL@@;if(!url){run();return}const ac=new AbortController(),skip=L('cukloadskip');
 const st=setTimeout(()=>{if(skip){skip.style.display='block';skip.onclick=()=>{ac.abort();run()}}},6000),hard=setTimeout(()=>ac.abort(),90000);
-msg('실내 지도를 받는 중이에요…');bar(10);
+msg('실내 정보를 받는 중이에요…');bar(15);
 fetch(url,{signal:ac.signal}).then(async r=>{if(!r.ok)return null;const tot=+r.headers.get('x-cuk-size')||0,rd=r.body.getReader(),parts=[];let n=0;
- for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);n+=value.length;const mb=(n/1048576).toFixed(1);if(tot){bar(10+n/tot*85);msg('실내 지도를 받는 중이에요… '+mb+' / '+(tot/1048576).toFixed(1)+' MB')}else{bar(10+85*(1-Math.exp(-n/4e6)));msg('실내 지도를 받는 중이에요… '+mb+' MB')}}
+ for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);n+=value.length;const mb=(n/1048576).toFixed(1);if(tot){bar(15+n/tot*70);msg('실내 정보를 받는 중이에요… '+mb+' / '+(tot/1048576).toFixed(1)+' MB')}else{bar(15+70*(1-Math.exp(-n/1.5e6)));msg('실내 정보를 받는 중이에요… '+mb+' MB')}}
  const buf=new Uint8Array(n);let o=0;for(const p of parts){buf.set(p,o);o+=p.length}return JSON.parse(new TextDecoder().decode(buf))})
  .then(j=>{if(!ran&&j&&j.indoor){L('indoor').textContent=JSON.stringify(j.indoor);L('plan2d').textContent=JSON.stringify(j.plan2d||{})}}).catch(()=>{}).finally(()=>{clearTimeout(st);clearTimeout(hard);run()})})()</script>"""
 
@@ -135,9 +144,15 @@ def build():
     for name in set(re.findall(r'@@IMG:([^@]+)@@', page)):
         p = J(D(), 'images', name)
         # 공개 보류 이미지는 배포본에 넣지 않고, 비공개 Worker(cukmap-indoor)에서 /private/ 로 받아 온다
-        url = (f'/private/{name}' if PUBLIC and name in RESTRICTED else data_url(p) if os.path.exists(p) else BLANK)
+        # 배포본: 그림은 HTML 안에 글자로 넣지 않고 /img/ 에 따로 둔다(동시에 받고, 브라우저가 오래 저장). 이름에 내용 지문을 붙여 바뀌면 새로 받게
+        url = (f'/private/{name}' if PUBLIC and name in RESTRICTED else img_file(p) if PUBLIC and os.path.exists(p)
+               else data_url(p) if os.path.exists(p) else BLANK)
         page = page.replace(f'@@IMG:{name}@@', url)
     assert '@@IMG:' not in page and '@@JSON:' not in page
+    if PUBLIC:
+        # 항공사진은 버튼을 누를 때 받는다(1.5 MB), 도면·사진은 화면에 나올 때 받는다
+        page, n = re.subn(r'(<img id="orthoTexture"[^>]*?) src=', r'\1 data-src=', page); assert n == 1
+        page, n = re.subn(r'<img (id="drawingTexture"|src="/private/evidence-0\.jpg")', r'<img loading="lazy" \1', page); assert n == 2
     page = page.replace('@@MAIN@@', main_script())
     os.makedirs(J('dist'), exist_ok=True)
     if PUBLIC:

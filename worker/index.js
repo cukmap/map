@@ -129,7 +129,7 @@ export default {
     if (p === '/indoor.json' || p.startsWith('/private/')) {
       if (!env.INDOOR) return new Response('indoor not configured', { status: 404 });
       const r = await env.INDOOR.fetch(new Request(new URL(p, 'https://indoor.internal'), request));
-      const h = new Headers(r.headers); h.set('cache-control', 'public, max-age=86400, stale-while-revalidate=604800');
+      const h = new Headers(r.headers); h.set('cache-control', p.startsWith('/private/indoor/') ? 'public, max-age=31536000, immutable' : 'public, max-age=86400, stale-while-revalidate=604800');
       // 진행률 표시용: 압축 전 크기(브라우저가 풀어서 세는 바이트와 같은 기준)
       const len = r.headers.get('content-length'); if (len) h.set('x-cuk-size', len);
       return new Response(r.body, { status: r.status, headers: h });
@@ -148,6 +148,8 @@ export default {
         return json({ error: 'not found' }, 404);
       } catch (e) { return json({ error: '서버 오류가 났어요. 잠시 후 다시 시도해 주세요.' }, 500); }
     }
+    // 이름에 내용 지문이 붙은 그림: 바뀌면 이름이 바뀌므로 오래 저장해도 된다
+    if (p.startsWith('/img/')) { const r = await env.ASSETS.fetch(request); const h = new Headers(r.headers); if (r.ok) h.set('cache-control', 'public, max-age=31536000, immutable'); return new Response(r.body, { status: r.status, headers: h }); }
     // 자료 바로 받기(/data/*): 다른 사이트에서도 불러 쓸 수 있게 허용
     if (p.startsWith('/data/')) { const r = await env.ASSETS.fetch(request); const h = new Headers(r.headers); h.set('access-control-allow-origin', '*'); return new Response(r.body, { status: r.status, headers: h }); }
     return env.ASSETS.fetch(request);
