@@ -5,6 +5,9 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 
 예시: [`examples/kit-demo/index.html`](../examples/kit-demo/index.html) (강의실 안내)
 
+코딩이 처음이라면 [시작 안내](START.md)부터 보세요. AI에게 부탁하는 법과 인터넷에 올리는 법이 있어요.
+지도 없이 목록과 위치만 필요하면 [자료 바로 받기](START.md#b-자료-바로-받기)를 쓰세요.
+
 ## 1. 가장 짧은 예
 
 ```html

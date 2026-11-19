@@ -146,6 +146,8 @@ export default {
         return json({ error: 'not found' }, 404);
       } catch (e) { return json({ error: '서버 오류가 났어요. 잠시 후 다시 시도해 주세요.' }, 500); }
     }
+    // 자료 바로 받기(/data/*): 다른 사이트에서도 불러 쓸 수 있게 허용
+    if (p.startsWith('/data/')) { const r = await env.ASSETS.fetch(request); const h = new Headers(r.headers); h.set('access-control-allow-origin', '*'); return new Response(r.body, { status: r.status, headers: h }); }
     return env.ASSETS.fetch(request);
   }
 };

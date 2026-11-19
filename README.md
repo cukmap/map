@@ -4,6 +4,14 @@
 
 > 이 문서는 초안이다. 프로젝트를 시작한 이유와 앞으로의 방향(Make cukmap)은 만든 사람이 직접 쓴다.
 
+## 가져다 쓰기
+
+학교 공간을 다루는 프로젝트라면 지도를 새로 만들지 않고 cukmap을 쓸 수 있어요. **지도 안의 「cukmap · 자료 출처」 표시만 지우지 않으면 자유롭게 써요.** 코딩을 몰라도 [시작 안내](docs/START.md)를 따라 하면 돼요.
+
+- 지도 부품: 내 페이지에 지도를 넣고 핀 찍기 → [docs/KIT.md](docs/KIT.md)
+- 자료 바로 받기: `cukmap.com/data/v1/buildings.json`, `places.json`, `entrances.json` (위도·경도)
+- 내 주소: `이름.cukmap.com` → [subdomains/](subdomains/README.md)
+
 ## 참여하기
 
 오류 제보는 [cukmap.com/edit](https://cukmap.com/edit/)에서 누구나, 직접 고치는 방법은 [참여 안내](CONTRIBUTING.md)에 있어요.
@@ -14,6 +22,7 @@
 - `cukmap.com/projects/` 활용 프로젝트 목록, `이름.cukmap.com` 하위 주소 — 신청은 [subdomains/](subdomains/README.md)에 파일 하나
 - `cukmap.com/contributors/` 함께 만든 사람들(GitHub 기여자, 제보 현황, 자료 출처)
 - `cukmap.com/embed/`, `cukmap.com/kit/v1/cukmap.js` 지도 부품: 내 사이트에 지도를 넣고 핀·층·보기를 다룸 → [docs/KIT.md](docs/KIT.md)
+- `cukmap.com/data/v1/` 자료 바로 받기(건물·장소·출입구 목록과 위치, 다른 사이트에서 불러오기 허용)
 - `cukmap.com/edit/` 지도 오류 제보 — 로그인 없이 누구나. 제보는 글자만 받고, 부적절 신고가 3번 모이면 자동으로 숨긴다. 「고쳐졌어요」가 2번 모이면 해결됨으로 옮긴다.
 
 ## 구조

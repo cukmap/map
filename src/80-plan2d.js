@@ -1,4 +1,4 @@
-// ===== 평면 지도 (2D · 층별 평면도) 시안 — 2026-11-13 =====
+// ===== 평면 지도 (2D · 층별 평면도) — 2026-11-13 =====
 // 입체 지도·지상 시점과 별개의 2D 캔버스 모드. 실외는 재질 지도(matid)를 지도 색으로 다시 칠하고,
 // 실내 도면이 있는 6개 동은 확대하면 층별 평면도(방 영역 색 + 도면 선 + 방 이름)를 보여 준다.
 {const P2D=JSON.parse(document.getElementById('plan2d').textContent);
@@ -12,7 +12,7 @@ const st2=document.createElement('style');st2.textContent=`#p2{position:absolute
 #p2hint{position:absolute;left:14px;top:14px;background:#ffffffee;border:1px solid #d7ddd7;border-radius:10px;padding:8px 11px;font-size:11.5px;line-height:1.5;color:#3d4a42;max-width:min(330px,70%);box-shadow:0 2px 10px #0001}#p2hint b{color:#2f6fed}
 #p2info{position:absolute;left:14px;bottom:18px;display:none;background:#fff;border:1px solid #cfd6d0;border-radius:12px;padding:11px 13px;box-shadow:0 6px 20px #0002;max-width:min(300px,72%);font-size:12px;color:#33423a}#p2info h4{margin:0 0 2px;font-size:15px}#p2info small{color:#6b7a70}#p2info .row{display:flex;gap:6px;margin-top:8px}#p2info button{font-size:11.5px;padding:6px 10px}#p2info .go{background:#2f6fed;color:#fff;border-color:#2f6fed}
 body.p2on .indoorBtn{display:none}`;document.head.appendChild(st2);
-const p2=document.createElement('div');p2.id='p2';p2.innerHTML=`<canvas></canvas><div id="p2hint"><b>평면 지도 · 시안</b><br>드래그 이동 · 휠/두 손가락 확대 · 실내 도면이 있는 건물(파란 테두리)을 확대하면 층별 평면도가 나옵니다.</div><div id="p2bar"></div><div id="p2zoom"><button data-z="1.5">＋</button><button data-z="0.667">−</button></div><div id="p2info"></div>`;world2.appendChild(p2);
+const p2=document.createElement('div');p2.id='p2';p2.innerHTML=`<canvas></canvas><div id="p2hint"><b>평면 지도</b><br>드래그 이동 · 휠/두 손가락 확대 · 실내 도면이 있는 건물(파란 테두리)을 확대하면 층별 평면도가 나옵니다.</div><div id="p2bar"></div><div id="p2zoom"><button data-z="1.5">＋</button><button data-z="0.667">−</button></div><div id="p2info"></div>`;world2.appendChild(p2);
 const cv=p2.querySelector('canvas'),cx2=cv.getContext('2d'),bar=p2.querySelector('#p2bar'),info=p2.querySelector('#p2info');
 const pb=document.createElement('button');pb.id='planBtn';pb.textContent='평면 지도';$('walkBtn').after(pb);
 // ---- 실외 바탕: 재질 id → 지도 색

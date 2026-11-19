@@ -83,6 +83,24 @@ def main_script():
         out.append(t)
     return '\n'.join(out).replace('</script', '<\\/script')
 
+# ---------- 자료 바로 받기: 지도 좌표(x 동쪽, z 남쪽, m) → 위도·경도
+LAT0, LON0 = 37.4867837, 126.8013923
+def ll(x, z): return [round(LAT0 - z / 110950, 7), round(LON0 + x / 88270, 7)]
+NOTE = '좌표는 [위도, 경도]. 출처: cukmap.com (국토지리정보원, © OpenStreetMap contributors 포함). 출처 표시만 지키면 자유롭게 쓸 수 있어요.'
+def open_data():
+    bs = []
+    for slug in building_dirs():
+        b = rj(D(), 'buildings', slug, 'building.json'); poly = b.get('poly') or []
+        if not poly: continue
+        cx = sum(p[0] for p in poly) / len(poly); cz = sum(p[1] for p in poly) / len(poly)
+        bs.append({'id': slug, 'code': b.get('code'), 'name': b.get('name'), 'floors': b.get('floors'),
+                   'basementFloors': b.get('basementFloors'), 'center': ll(cx, cz), 'outline': [ll(x, z) for x, z in poly]})
+    places = [{'name': p['name'], 'kind': p.get('kind'), 'at': ll(*p['xy'])} for p in rj(D(), 'campus', 'places.json') if p.get('xy')]
+    ents = [{'id': n['id'], 'name': n.get('nm'), 'building': n.get('bn'), 'buildingCode': n.get('b'), 'floor': n.get('fl'), 'at': ll(n['x'], n['z'])}
+            for n in rj(D(), 'network', 'nodes.json') if n.get('k') == 'entrance']
+    meta = {'campus': 'songsim', 'note': NOTE}
+    return {'buildings': {**meta, 'buildings': bs}, 'places': {**meta, 'places': places}, 'entrances': {**meta, 'entrances': ents}}
+
 BOOT = """<script>(()=>{const run=()=>{for(const t of document.querySelectorAll('script.cukrun')){const s=document.createElement('script');s.textContent=t.textContent;document.body.appendChild(s)}};
 const url=%s;if(!url){run();return}const ac=new AbortController(),to=setTimeout(()=>ac.abort(),20000);
 fetch(url,{signal:ac.signal}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.indoor){document.getElementById('indoor').textContent=JSON.stringify(j.indoor);document.getElementById('plan2d').textContent=JSON.stringify(j.plan2d||{})}}).catch(()=>{}).finally(()=>{clearTimeout(to);run()})})()</script>"""
@@ -138,6 +156,11 @@ def build():
     open(J('dist', '_subdomains.json'), 'w', encoding='utf-8').write(json.dumps({'subdomains': subs, 'pinned': pinned}, ensure_ascii=False))
     os.makedirs(J('dist', 'projects'), exist_ok=True)
     shutil.copy(J('site', 'projects.html'), J('dist', 'projects', 'index.html'))
+    # 자료 바로 받기(/data/v1/*.json): 지도를 그리지 않고 목록·좌표만 필요한 프로젝트용(위도·경도)
+    os.makedirs(J('dist', 'data', 'v1'), exist_ok=True)
+    for name, obj in open_data().items():
+        open(J('dist', 'data', 'v1', name + '.json'), 'w', encoding='utf-8').write(json.dumps(obj, ensure_ascii=False, separators=(',', ':')))
+    print('dist/data/v1/ (자료 바로 받기)')
     # 함께 만든 사람들(/contributors/): 지도 없는 가벼운 쪽
     os.makedirs(J('dist', 'contributors'), exist_ok=True)
     shutil.copy(J('site', 'contributors.html'), J('dist', 'contributors', 'index.html'))
