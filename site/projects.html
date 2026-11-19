@@ -17,7 +17,16 @@ main{max-width:920px;margin:0 auto;padding:28px 20px 60px}
 h1{font-size:26px;margin:0 0 6px}.lead{color:#5b6f62;margin:0 0 18px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .sort{display:flex;gap:6px}.sort button{font:inherit;font-size:13px;border:1px solid #d7e2db;border-radius:9px;padding:7px 12px;background:#fff;color:#244f3d;cursor:pointer}.sort button.on{background:#244f3d;color:#fff;border-color:#244f3d}
-.add{font-size:13px;text-decoration:none;border:1px solid #e8552e;color:#c2401c;border-radius:9px;padding:7px 12px;background:#fff}
+.add{font-size:13px;text-decoration:none;border:1px solid #e8552e;color:#c2401c;border-radius:9px;padding:7px 12px;background:#fff;cursor:pointer;font-family:inherit}
+#guide{position:fixed;inset:0;z-index:50;background:#1c2b2266;display:none;align-items:center;justify-content:center;padding:16px}#guide.on{display:flex}
+#guide .box{width:min(540px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px #0003;padding:18px 22px 16px;position:relative}
+#guide .x{position:absolute;right:12px;top:10px;border:0;background:none;font-size:20px;color:#8a978e;cursor:pointer}
+#guide small{color:#8a978e;letter-spacing:1px;font-size:12px}#guide h2{font-size:20px;margin:4px 0 8px}#guide p{margin:0 0 10px;color:#4d6355;font-size:14px}
+#guide ol{margin:0 0 12px;padding-left:0;list-style:none;counter-reset:s}#guide li{counter-increment:s;position:relative;padding:8px 0 8px 36px;border-bottom:1px dashed #e6ece7;font-size:14px;line-height:1.55}
+#guide li:before{content:counter(s);position:absolute;left:0;top:8px;width:24px;height:24px;border-radius:50%;background:#244f3d;color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center}
+#guide li small{display:block;color:#6b7a70;letter-spacing:0;font-size:12.5px}#guide code{background:#f1f5f1;border-radius:5px;padding:1px 5px;font-size:12.5px}
+#guide .tip{background:#f3f8f3;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#4d6355;margin:0 0 12px}
+#guide .go{display:flex;gap:6px;flex-wrap:wrap}#guide .go a{font-size:13px;text-decoration:none;border:1px solid #d7e2db;border-radius:9px;padding:9px 13px;color:#244f3d}#guide .go a.hot{background:#244f3d;color:#fff;border-color:#244f3d}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .card{background:#fff;border:1px solid #dfe7e0;border-radius:14px;padding:16px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px}
 .card:hover{border-color:#9cc3a8;box-shadow:0 4px 14px #1c44201a}
@@ -32,18 +41,37 @@ h1{font-size:26px;margin:0 0 6px}.lead{color:#5b6f62;margin:0 0 18px}
 <header class="top"><a class="brand" href="/">cuk<span>map</span></a><nav><a href="/">홈</a><a href="/contributors/">함께 만든 사람들</a><a class="hot" href="/edit/">오류 제보</a></nav></header>
 <main>
 <h1>활용 프로젝트</h1>
-<p class="lead">cukmap 지도를 활용해 만든 프로젝트예요. 누구나 <b>이름.cukmap.com</b> 주소로 자기 프로젝트를 올릴 수 있어요.</p>
+<p class="lead">cukmap 지도를 활용해 만든 프로젝트를 구경해 보세요. 학교 공간을 다루는 프로젝트라면 누구나 <b>코드 없이</b> 이 지도로 만들고, <b>이름.cukmap.com</b> 주소로 올릴 수 있어요.</p>
 <div class="bar">
 <div class="sort"><button data-s="hot" class="on">인기(최근 7일)</button><button data-s="new">최신순</button><button data-s="old">오래된 순</button></div>
-<a class="add" href="https://github.com/cukmap/map/blob/main/docs/START.md">＋ 내 프로젝트 올리기</a>
+<button class="add" id="addBtn">＋ 내 프로젝트 만들기</button>
 </div>
 <div id="list"><div class="empty">불러오는 중…</div></div>
 </main>
+<div id="guide" role="dialog" aria-modal="true" aria-label="내 프로젝트 만들기 안내"><div class="box"><button class="x" aria-label="닫기">×</button>
+<small>MAKE WITH CUKMAP</small><h2>이 지도로 내 프로젝트 만들기</h2>
+<p>OT 강의실 안내, 축제 부스 지도, 시설 위치처럼 학교 공간을 다루는 프로젝트라면 지도를 새로 만들 필요가 없어요. 처음이면 30분 정도 걸려요.</p>
+<ol>
+<li><b>GitHub 가입</b><small>파일을 올리고 무료로 웹페이지를 여는 곳이에요.</small></li>
+<li><b>견본 복사</b><small>견본 저장소에서 <b>Use this template → Create a new repository</b></small></li>
+<li><b>content.txt 고치기</b><small>제목과 장소 목록만 적어요. 예) <code>N301 | 국어국문학과 OT | 3월 2일 10:00</code></small></li>
+<li><b>페이지 열기</b><small><b>Settings → Pages → Branch: main → Save</b> 하면 1~2분 뒤 내 페이지가 열려요.</small></li>
+<li><b>이름.cukmap.com 받기</b><small>신청 파일 하나를 보내면 자동 검사 후 주소가 생기고, 이 목록에 올라가요.</small></li>
+</ol>
+<div class="tip">코드는 한 줄도 쓰지 않아요. 지도 안의 「cukmap · 자료 출처」 표시만 지우지 않으면 자유롭게 써도 돼요.</div>
+<div class="go"><a class="hot" href="https://github.com/cukmap/map/blob/main/docs/START.md" target="_blank" rel="noopener">단계별 설명서 보기</a><a href="https://github.com/cukmap/starter" target="_blank" rel="noopener">견본 저장소</a></div>
+</div></div>
+<script>
+(()=>{const g=document.getElementById('guide'),open=()=>g.classList.add('on'),close=()=>g.classList.remove('on');
+document.getElementById('addBtn').onclick=open;g.querySelector('.x').onclick=close;g.addEventListener('click',e=>{if(e.target===g)close()});
+addEventListener('keydown',e=>{if(e.key==='Escape')close()});if(location.hash==='#make')open()})();
+</script>
+
 <script>
 (()=>{const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
 let ps=[],sort='hot';const list=document.getElementById('list');
 const render=()=>{list.textContent='';
- if(!ps.length){const d=el('div','empty');d.append('아직 등록된 프로젝트가 없어요. 첫 번째 프로젝트를 ');const a=el('a',null,'올려 보세요');a.href='https://github.com/cukmap/map/tree/main/subdomains';d.append(a,'.');list.appendChild(d);return}
+ if(!ps.length){const d=el('div','empty');d.append('아직 등록된 프로젝트가 없어요. 첫 번째 프로젝트를 ');const a=el('a',null,'만들어 보세요');a.href='#make';a.onclick=e=>{e.preventDefault();document.getElementById('guide').classList.add('on')};d.append(a,'.');list.appendChild(d);return}
  const by={hot:(a,b)=>b.visits7-a.visits7||b.since-a.since,new:(a,b)=>b.since-a.since,old:(a,b)=>a.since-b.since}[sort];
  const arr=[...ps].sort((a,b)=>(b.pinned-a.pinned)||by(a,b));const g=el('div','grid');
  for(const p of arr){const c=el('a','card');c.href=p.url;c.target='_blank';c.rel='noopener';c.append(el('h2',null,p.title||p.name),el('span','u',p.name+'.cukmap.com'),el('p',null,p.description||''));
