@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cukmap 활용 프로젝트</title>
+<!-- 이 파일은 고치지 않아도 돼요. 내용은 content.txt 에서 바꿔요. -->
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#26392f;display:grid;grid-template-columns:320px 1fr;height:100vh}
+aside{display:flex;flex-direction:column;border-right:1px solid #dfe7e0;min-height:0}
+header{padding:20px 18px 12px}
+h1{font-size:20px;margin:0 0 6px}
+#desc{color:#5b6f62;font-size:13.5px;line-height:1.55;margin:0}
+#team{color:#8a978e;font-size:12px;margin-top:8px}
+#list{flex:1;overflow:auto;padding:4px 14px 14px}
+#list button{display:block;width:100%;text-align:left;margin:6px 0;padding:11px 13px;border:1px solid #d7e2db;border-radius:10px;background:#fff;cursor:pointer;font:inherit}
+#list button b{display:block;font-size:14px}#list button small{color:#6b7a70;font-size:12px}
+#list button:hover,#list button.on{background:#eef5ef;border-color:#9cc3a8}
+#views{display:flex;gap:6px;padding:0 14px 14px}
+#views button{flex:1;padding:8px;border:1px solid #d7e2db;border-radius:9px;background:#fff;cursor:pointer;font:inherit;font-size:12.5px}
+#views button.on{background:#244f3d;color:#fff;border-color:#244f3d}
+#err{display:none;margin:0 14px 10px;padding:10px 12px;border-radius:9px;background:#fff1ea;color:#9b3a16;font-size:12.5px;line-height:1.5}
+#map{min-height:320px}
+@media(max-width:760px){body{grid-template-columns:1fr;grid-template-rows:auto 62vh;height:auto}aside{border-right:0;border-bottom:1px solid #dfe7e0}#list{max-height:40vh}}
+</style>
+</head>
+<body>
+<aside>
+  <header><h1 id="title">불러오는 중…</h1><p id="desc"></p><div id="team"></div></header>
+  <div id="err"></div>
+  <div id="list"></div>
+  <div id="views"><button data-v="2d">평면</button><button data-v="3d">입체</button><button data-v="walk">걷기</button></div>
+</aside>
+<div id="map"></div>
+<script src="https://cukmap.com/kit/v1/cukmap.js"></script>
+<script>
+(async () => {
+  const $ = id => document.getElementById(id);
+  const VIEW = { '평면': '2d', '입체': '3d', '걷기': 'walk', '2d': '2d', '3d': '3d', 'walk': 'walk' };
+  const problems = [];
+  const showProblems = () => {
+    if (!problems.length) return;
+    $('err').style.display = 'block';
+    $('err').textContent = '';
+    $('err').append('content.txt 에서 확인할 곳이 있어요:');
+    for (const p of problems) { const d = document.createElement('div'); d.textContent = '· ' + p; $('err').appendChild(d); }
+  };
+
+  // 1) content.txt 읽기
+  let text = '';
+  try { const r = await fetch('content.txt', { cache: 'no-cache' }); text = await r.text(); }
+  catch (e) { problems.push('content.txt 파일을 찾지 못했어요.'); }
+  const info = {}, places = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) return;
+    if (line.includes('|')) {
+      const [where, name, note] = line.split('|').map(s => (s || '').trim());
+      if (!where || !name) { problems.push(`${i + 1}번째 줄: "위치 | 이름" 모양으로 적어 주세요.`); return; }
+      places.push({ line: i + 1, where, name, note: note || '' });
+    } else {
+      const m = line.match(/^([^:：]+)[:：]\s*(.*)$/);
+      if (m) info[m[1].trim()] = m[2].trim();
+      else problems.push(`${i + 1}번째 줄: 무슨 뜻인지 모르겠어요. 장소라면 "위치 | 이름" 모양으로 적어 주세요.`);
+    }
+  });
+  const title = info['제목'] || '내 cukmap 프로젝트';
+  $('title').textContent = title; document.title = title;
+  $('desc').textContent = info['설명'] || '';
+  $('team').textContent = info['만든 사람'] ? '만든 사람: ' + info['만든 사람'] : '';
+  const view = VIEW[(info['처음 보기'] || '평면').replace(/\s/g, '')] || '2d';
+
+  // 2) 위치 글자를 지도 부품이 알아듣는 모양으로
+  const LAT0 = 37.4867837, LON0 = 126.8013923;
+  const parse = w => {
+    let m = w.match(/^\[?\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]?$/);
+    if (m) {
+      const a = +m[1], b = +m[2];
+      if (a > 30 && a < 45 && b > 120 && b < 135) return { x: (b - LON0) * 88270, z: (LAT0 - a) * 110950 }; // 위도, 경도
+      return { x: a, z: b };
+    }
+    m = w.match(/^(.+?)\s+(B?\d+)\s*F$/i);
+    if (m) return { building: m[1].trim(), floor: m[2].toUpperCase() + 'F' };
+    if (/^[A-Za-z]{1,3}\d{2,4}[A-Za-z]?$/.test(w)) return { room: w.toUpperCase() };
+    return { building: w };
+  };
+
+  // 3) 지도 만들고 핀 찍기
+  const map = await CUKmap.create('#map', { view });
+  const buttons = [], byId = {};
+  for (const [i, p] of places.entries()) {
+    const pin = { id: 'p' + i, label: p.name, ...parse(p.where) };
+    try { await map.addPin(pin); }
+    catch (e) {
+      if (pin.room) { // 강의실로 못 찾으면 건물 이름으로 한 번 더
+        try { delete pin.room; pin.building = p.where; await map.addPin(pin); }
+        catch (e2) { problems.push(`${p.line}번째 줄: "${p.where}"을(를) 지도에서 찾지 못했어요.`); continue; }
+      } else { problems.push(`${p.line}번째 줄: "${p.where}"을(를) 지도에서 찾지 못했어요.`); continue; }
+    }
+    const b = document.createElement('button');
+    const bt = document.createElement('b'); bt.textContent = p.name;
+    const sm = document.createElement('small'); sm.textContent = [p.note, p.where].filter(Boolean).join(' · ');
+    b.append(bt, sm);
+    const go = () => {
+      buttons.forEach(x => x.classList.toggle('on', x === b));
+      map.focus(pin.room ? { room: pin.room } : pin.building ? { building: pin.building, floor: pin.floor } : { x: pin.x, z: pin.z });
+      map.selectPin(pin.id);
+    };
+    b.onclick = go; buttons.push(b); byId[pin.id] = b; $('list').appendChild(b);
+  }
+  map.on('pinClick', e => { if (byId[e.id]) byId[e.id].click(); });
+  const setV = v => { map.setView(v); document.querySelectorAll('#views button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); };
+  document.querySelectorAll('#views button').forEach(b => b.onclick = () => setV(b.dataset.v));
+  document.querySelectorAll('#views button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  showProblems();
+})().catch(e => { document.getElementById('title').textContent = '지도를 불러오지 못했어요'; console.error(e); });
+</script>
+</body>
+</html>
