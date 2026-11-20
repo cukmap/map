@@ -57,6 +57,7 @@
       setView: function (v) { return call('setView', v); },
       /** 이동: {building, floor} | {room} | {x, z}, zoom(선택) */
       focus: function (o) { return call('focus', o); },
+      walkAt: function (o) { return call('walkAt', o); },
       /** 건물 목록: [{id, code, name, floors, indoor:[층...]}] */
       buildings: function () { return call('buildings'); },
       /** 이벤트: 'click'(지도 누름: x, z, floor, building), 'pinClick'(id) */

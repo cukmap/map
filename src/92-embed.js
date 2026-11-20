@@ -45,8 +45,14 @@ async function focus(o){o=o||{};let x=+o.x,z=+o.z,b=null,floor=o.floor||null;
  const ib=b&&floor&&typeof IB!=='undefined'?IB.find(q=>q.bv===b):null;
  if(ib&&ib.d.floors.some(f=>f.id===floor)){await enterIndoor(ib,floor);if(isFinite(+o.x)){camera.target=[x,camera.target[1],z]}return}
  if(camera.mode==='walk')$('orbitBtn').click();camera.target=[x,(b?H(b.cx,b.cz)+(b.h||10)*.4:H(x,z)+4),z];camera.dist=+o.zoom||(b?Math.max(120,(b.h||10)*6+90):140)}
+// 지상 시점으로 그 자리에 서기: {x,z} 위치에서 look({x,z} 또는 building)을 바라본다 — 「같은 각도로 비교하기」용
+function walkAt(o){o=o||{};let x=+o.x,z=+o.z;if(o.building&&!(isFinite(x)&&isFinite(z))){const b=PK.findB(o.building);if(!b)throw new Error('건물을 찾지 못했어요: '+o.building);x=b.cx;z=b.cz}
+ if(!(isFinite(x)&&isFinite(z)))throw new Error('위치(x, z)를 알려 주세요.');
+ let lx=NaN,lz=NaN;const L=o.look||{};if(L.building){const b=PK.findB(L.building);if(b){lx=b.cx;lz=b.cz}}else{lx=+L.x;lz=+L.z}
+ if(globalThis.__P2ON||camera.mode!=='walk')$('walkBtn').click();
+ camera.mode='walk';camera.pos=[x,H(x,z)+1.8,z];if(isFinite(lx)&&isFinite(lz)&&(lx!==x||lz!==z))camera.yaw=Math.atan2(lx-x,-(lz-z));camera.pitch=.02;if(typeof setMode==='function')setMode()}
 function buildings(){return B.map(b=>Object.assign(bInfo(b),{floors:b.floors||null,indoor:typeof IB!=='undefined'&&IB.some(q=>q.bv===b)?IB.find(q=>q.bv===b).d.floors.map(f=>f.id):[]}))}
-const CMD={addPin,removePin:id=>removePin(id),clearPins:()=>{for(const id of [...pins.keys()])removePin(id)},selectPin:id=>select(String(id)),setView,focus,buildings,
+const CMD={addPin,walkAt,removePin:id=>removePin(id),clearPins:()=>{for(const id of [...pins.keys()])removePin(id)},selectPin:id=>select(String(id)),setView,focus,buildings,
  view:()=>globalThis.__P2ON?'2d':camera.mode==='walk'?'walk':'3d'};
 addEventListener('message',async e=>{const m=e.data;if(!m||m.cukmap!==1||!m.cmd)return;const f=CMD[m.cmd];
  try{if(!f)throw new Error('모르는 명령이에요: '+m.cmd);const data=await f(...(Array.isArray(m.args)?m.args:[m.args]));post({reply:m.id,ok:true,data})}catch(err){post({reply:m.id,ok:false,error:String(err&&err.message||err)})}});
