@@ -40,5 +40,15 @@ globalThis.__FACEAT=(b,x,y,z)=>{if(!b||!isFinite(y))return null;const s=sidesOf(
  for(const k in s)for(const e of s[k]){const dx=e.q[0]-e.p[0],dz=e.q[1]-e.p[1],t=Math.max(0,Math.min(1,((x-e.p[0])*dx+(z-e.p[1])*dz)/(e.L*e.L))),d=Math.hypot(e.p[0]+dx*t-x,e.p[1]+dz*t-z);if(!best||d<best.d)best={d,side:k,col:Math.min(s[k].cols-1,Math.floor((e.s0+t*e.L)/(s[k].total/s[k].cols)))}}
  let fl=null;for(const f of floorsOf(b)){const [a,c]=band(b,f);if(y>=a-.05&&y<c)fl=f}
  return best&&best.d<4?{side:best.side,level:fl,col:best.col}:null};
-Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint});
+// 지형·건물 모양 내보내기: 하위 주소 프로젝트가 자기만의 화면(예: 블록 세상)을 만들 때 쓴다. 본 지도가 고쳐지면 같이 바뀐다
+function shape(o){o=o||{};const x0=+o.x0,z0=+o.z0,x1=+o.x1,z1=+o.z1,st=Math.max(.5,+o.step||1);if(![x0,z0,x1,z1].every(isFinite))throw new Error('범위(x0, z0, x1, z1)를 알려 주세요.');
+ const nx=Math.min(800,Math.floor((x1-x0)/st)+1),nz=Math.min(800,Math.floor((z1-z0)/st)+1),h=new Array(nx*nz);for(let j=0;j<nz;j++)for(let i=0;i<nx;i++)h[j*nx+i]=+H(x0+i*st,z0+j*st).toFixed(2);
+ const inBox=b=>b.poly.some(p=>p[0]>=x0-20&&p[0]<=x1+20&&p[1]>=z0-20&&p[1]<=z1+20),out=[];
+ for(const b of B){if(!b.poly||!inBox(b))continue;const parts=[];
+  if(b.spec){const lift=b.spec.lift||0,lvl1=b.spec.datum!=null?b.spec.datum:Math.min(...b.poly.map(p=>H(...p)))+lift;
+   for(const pt of b.spec.parts){const base=lvl1+(pt.base||0),top=base+pt.height,fh=Math.max(2.8,(pt.height-(pt.parapet>0?pt.parapet:0))/pt.floors);parts.push({poly:pt.poly,holes:pt.holes||[],bottom:pt.bottom>0?base+pt.bottom:(pt.pilotis?base+pt.pilotis*fh:null),top:+top.toFixed(2),wall:pt.wall||null,roof:pt.roofColor||null})}}
+  else parts.push({poly:b.poly,holes:b.holes||[],bottom:null,top:+(b.roof||0).toFixed(2),wall:null,roof:null});
+  out.push({name:b.name,code:b.code||null,parts})}
+ return {x0,z0,step:st,nx,nz,heights:h,buildings:out}}
+Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint,shape});
 })()}

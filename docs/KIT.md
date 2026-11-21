@@ -51,6 +51,7 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 | `map.faces('니콜스관')` | 건물의 면(북·동·남·서, 면마다 약 4m 폭 세로 줄 수 `cols`)과 층 목록 |
 | `map.paint([{ building, side, floor, col, color }])` | 건물 벽의 그 면·층(`col`을 주면 그 세로 줄 한 칸만)을 색으로 덮기(`color: null`이면 지우기). 기본 지도는 바뀌지 않아요 |
 | `map.clearPaint()`, `map.showPaint(false)` | 칠 모두 지우기 / 잠깐 숨기기(원래 모습 보기) |
+| `map.shape({ x0, z0, x1, z1, step })` | 그 범위의 지형 높이 격자와 건물 모양(외곽·바닥·꼭대기 높이). 블록 세상처럼 나만의 화면을 만들 때 |
 | `map.buildings()` | 건물 목록 `[{ id, code, name, floors, indoor: [층...] }]` |
 | `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor`. 입체 보기에서 건물 벽을 누르면 `e.side`(면), `e.level`(층), `e.col`(세로 줄)도 |
 | `map.on('pinClick', e => …)` | 핀을 누르면 `e.id` |
