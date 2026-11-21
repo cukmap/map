@@ -63,7 +63,7 @@ canvas.addEventListener('pointermove',e=>{if(!CTL.ptrs.has(e.pointerId))return;c
 function endPtr(e){if(!CTL.ptrs.has(e.pointerId))return;CTL.ptrs.delete(e.pointerId);if(CTL.mode==='pinch'){if(CTL.ptrs.size===1){const p=[...CTL.ptrs.values()][0];CTL.mode=camera.mode==='walk'?'look':'pan';const r=screenRay(p[0],p[1]);CTL.grab=rayGround(r)||rayPlane(r,camera.target[1])}else if(!CTL.ptrs.size)CTL.mode=null;CTL.vel=[0,0];return}
  if(CTL.ptrs.size)return;const wasPan=CTL.mode==='pan';CTL.mode=null;CTL.grab=null;canvas.style.cursor='grab';
  if(performance.now()-CTL.last>80||!wasPan)CTL.vel=[0,0];
- if(CTL.moved<5&&e.type==='pointerup'){CTL.vel=[0,0];if(!(globalThis.__netPick&&globalThis.__netPick(e)))pick(e)}}
+ if(CTL.moved<5&&e.type==='pointerup'){CTL.vel=[0,0];if(!(globalThis.__netPick&&globalThis.__netPick(e))&&!globalThis.__NOPICK)pick(e)}}
 canvas.addEventListener('pointerup',endPtr);canvas.addEventListener('pointercancel',endPtr);canvas.addEventListener('contextmenu',e=>e.preventDefault());
 function zoomAt(cx,cy,f,instant){const g=CTL.goal;if(!g)return;const nd=clamp(g.dist*f,DMIN,DMAX),r=nd/g.dist;const P=groundAt(cx,cy);if(P&&camera.mode!=='walk'){g.t=clampT([P[0]+(g.t[0]-P[0])*r,P[1]+(g.t[1]-P[1])*r,P[2]+(g.t[2]-P[2])*r])}g.dist=nd;if(instant){camera.target=g.t.slice();camera.dist=g.dist;CTL.applied=camSnap()}}
 canvas.addEventListener('wheel',e=>{e.preventDefault();if(camera.mode==='walk')return;const dy=e.deltaMode===1?e.deltaY*33:e.deltaY;zoomAt(e.clientX,e.clientY,Math.exp(clamp(dy,-200,200)*.0012),false)},{passive:false});

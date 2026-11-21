@@ -23,6 +23,7 @@
     if (opt.focus) q.set('focus', opt.focus);
     if (opt.floor) q.set('floor', opt.floor);
     if (opt.ui === false) q.set('ui', '0');
+    if (opt.select === false) q.set('select', '0');
     // src: 고정판(내려받아 직접 올린 embed 파일)을 쓰고 싶을 때 그 주소
     var src = (opt.src || BASE + '/embed/') + (q.toString() ? '?' + q : '');
     var frame = document.createElement('iframe');

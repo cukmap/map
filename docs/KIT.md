@@ -31,6 +31,7 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 | `focus` | 처음에 보여 줄 건물 | `'니콜스관'` |
 | `floor` | 처음에 보여 줄 층(focus와 함께) | `'3F'` |
 | `ui` | `false`면 확대 버튼·미니맵을 숨김 | `false` |
+| `select` | `false`면 건물을 눌러도 기본 지도가 건물을 고르지 않음(카메라가 움직이지 않음). 누르기를 직접 다룰 때 | `false` |
 | `src` | 고정판을 쓸 때 그 파일 주소(아래 5번) | |
 
 건물은 코드(`'N'`), 영문 이름(`'nichols'`), 한글 이름(`'니콜스관'`) 모두 받아요. 목록은 `map.buildings()`로 볼 수 있어요.
@@ -44,14 +45,14 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 | `map.addPin({ id, x, z, label })` | 좌표에 핀. 좌표는 [cukmap.com/edit](https://cukmap.com/edit/)에서 찍으면 나와요 |
 | `map.removePin(id)`, `map.clearPins()` | 핀 지우기 |
 | `map.selectPin(id)` | 핀 강조 |
-| `map.focus({ room })`, `map.focus({ building, floor })`, `map.focus({ x, z, zoom })` | 그곳으로 이동 |
+| `map.focus({ room })`, `map.focus({ building, floor })`, `map.focus({ x, z, zoom })` | 그곳으로 이동. 입체 보기에서는 `yaw`(바라보는 방향, 라디안), `pitch`(내려다보는 각도)도 줄 수 있어요 |
 | `map.setView('3d' \| '2d' \| 'walk')` | 보기 바꾸기 |
 | `map.walkAt({ x, z, look: { building } })` | 지상 시점으로 그 자리에 서서 건물(또는 `look: { x, z }`)을 바라보기 |
-| `map.faces('니콜스관')` | 건물의 면(북·동·남·서)과 층 목록 |
-| `map.paint([{ building, side, floor, color }])` | 건물 벽의 그 면·층을 색으로 덮기(`color: null`이면 지우기). 기본 지도는 바뀌지 않아요 |
+| `map.faces('니콜스관')` | 건물의 면(북·동·남·서, 면마다 약 4m 폭 세로 줄 수 `cols`)과 층 목록 |
+| `map.paint([{ building, side, floor, col, color }])` | 건물 벽의 그 면·층(`col`을 주면 그 세로 줄 한 칸만)을 색으로 덮기(`color: null`이면 지우기). 기본 지도는 바뀌지 않아요 |
 | `map.clearPaint()`, `map.showPaint(false)` | 칠 모두 지우기 / 잠깐 숨기기(원래 모습 보기) |
 | `map.buildings()` | 건물 목록 `[{ id, code, name, floors, indoor: [층...] }]` |
-| `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor`. 입체 보기에서 건물 벽을 누르면 `e.side`(면), `e.level`(층)도 |
+| `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor`. 입체 보기에서 건물 벽을 누르면 `e.side`(면), `e.level`(층), `e.col`(세로 줄)도 |
 | `map.on('pinClick', e => …)` | 핀을 누르면 `e.id` |
 
 모든 명령은 Promise를 돌려줘요. 찾을 수 없는 방·건물이면 오류 메시지와 함께 실패해요.

@@ -3,6 +3,7 @@
 // 명령은 postMessage 로 받는다. 직접 쓰기보다 /kit/v1/cukmap.js 를 쓰는 게 쉽다(docs/KIT.md).
 if(globalThis.CUK_MODE==='embed'){(()=>{
 const Q=new URLSearchParams(location.search),UI=Q.get('ui')!=='0',PK=CUKPICK,world=$('gl').parentElement;
+if(Q.get('select')==='0')globalThis.__NOPICK=true; // 건물을 눌러도 기본 지도의 건물 고르기(카메라 이동·정보 창)를 하지 않음 — 벽 칠하기 등 누르기를 직접 다루는 프로젝트용
 const st=document.createElement('style');st.textContent=`
 .top,.side,.hud,.intro,#p2hint{display:none!important}
 .body{grid-template-columns:minmax(0,1fr)!important}.world{grid-column:1/-1!important}
@@ -44,7 +45,7 @@ async function focus(o){o=o||{};let x=+o.x,z=+o.z,b=null,floor=o.floor||null;
   if(b&&floor){const ib=P.ibs.find(q=>q.bv===b);if(ib){const fi=ib.d.floors.findIndex(f=>f.id===floor);if(fi>=0)PL.fl[ib.d.code]=fi}}PL.dirty=true;return}
  const ib=b&&floor&&typeof IB!=='undefined'?IB.find(q=>q.bv===b):null;
  if(ib&&ib.d.floors.some(f=>f.id===floor)){await enterIndoor(ib,floor);if(isFinite(+o.x)){camera.target=[x,camera.target[1],z]}return}
- if(camera.mode==='walk')$('orbitBtn').click();camera.target=[x,(b?H(b.cx,b.cz)+(b.h||10)*.4:H(x,z)+4),z];camera.dist=+o.zoom||(b?Math.max(120,(b.h||10)*6+90):140)}
+ if(camera.mode==='walk')$('orbitBtn').click();camera.target=[x,(b?H(b.cx,b.cz)+(b.h||10)*.4:H(x,z)+4),z];camera.dist=+o.zoom||(b?Math.max(120,(b.h||10)*6+90):140);if(isFinite(+o.yaw))camera.yaw=+o.yaw;if(isFinite(+o.pitch))camera.pitch=Math.max(.05,Math.min(1.5,+o.pitch))}
 // 지상 시점으로 그 자리에 서기: {x,z} 위치에서 look({x,z} 또는 building)을 바라본다 — 「같은 각도로 비교하기」용
 function walkAt(o){o=o||{};let x=+o.x,z=+o.z;if(o.building&&!(isFinite(x)&&isFinite(z))){const b=PK.findB(o.building);if(!b)throw new Error('건물을 찾지 못했어요: '+o.building);x=b.cx;z=b.cz}
  if(!(isFinite(x)&&isFinite(z)))throw new Error('위치(x, z)를 알려 주세요.');
@@ -61,7 +62,7 @@ let downAt=null;world.addEventListener('pointerdown',e=>{downAt=[e.clientX,e.cli
 world.addEventListener('pointerup',e=>{if(!downAt)return;const mv=Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1]);downAt=null;if(mv>6||e.target.closest('.kpin'))return;
  if(!(e.target===$('gl')||e.target.closest('#p2')))return;const p=globalThis.__P2ON?PK.pickPlan(e.clientX,e.clientY):PK.pick3d(e.clientX,e.clientY);if(!p)return;
  const fa=!globalThis.__P2ON&&p.b&&globalThis.__FACEAT?globalThis.__FACEAT(p.b,p.x,p.y,p.z):null;
- post({event:'click',x:+p.x.toFixed(2),z:+p.z.toFixed(2),floor:p.floor||null,building:bInfo(p.b),side:fa?fa.side:null,level:fa?fa.level:null})},true);
+ post({event:'click',x:+p.x.toFixed(2),z:+p.z.toFixed(2),floor:p.floor||null,building:bInfo(p.b),side:fa?fa.side:null,level:fa?fa.level:null,col:fa?fa.col:null})},true);
 // 처음 보기
 (async()=>{const v=Q.get('view');if(v&&v!=='3d')try{setView(v)}catch(e){}
  if(Q.get('focus'))try{await focus({building:Q.get('focus'),floor:Q.get('floor')||null})}catch(e){}
