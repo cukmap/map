@@ -60,7 +60,8 @@ addEventListener('message',async e=>{const m=e.data;if(!m||m.cukmap!==1||!m.cmd)
 let downAt=null;world.addEventListener('pointerdown',e=>{downAt=[e.clientX,e.clientY]},true);
 world.addEventListener('pointerup',e=>{if(!downAt)return;const mv=Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1]);downAt=null;if(mv>6||e.target.closest('.kpin'))return;
  if(!(e.target===$('gl')||e.target.closest('#p2')))return;const p=globalThis.__P2ON?PK.pickPlan(e.clientX,e.clientY):PK.pick3d(e.clientX,e.clientY);if(!p)return;
- post({event:'click',x:+p.x.toFixed(2),z:+p.z.toFixed(2),floor:p.floor||null,building:bInfo(p.b)})},true);
+ const fa=!globalThis.__P2ON&&p.b&&globalThis.__FACEAT?globalThis.__FACEAT(p.b,p.x,p.y,p.z):null;
+ post({event:'click',x:+p.x.toFixed(2),z:+p.z.toFixed(2),floor:p.floor||null,building:bInfo(p.b),side:fa?fa.side:null,level:fa?fa.level:null})},true);
 // 처음 보기
 (async()=>{const v=Q.get('view');if(v&&v!=='3d')try{setView(v)}catch(e){}
  if(Q.get('focus'))try{await focus({building:Q.get('focus'),floor:Q.get('floor')||null})}catch(e){}

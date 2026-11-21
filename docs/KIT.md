@@ -47,8 +47,11 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 | `map.focus({ room })`, `map.focus({ building, floor })`, `map.focus({ x, z, zoom })` | 그곳으로 이동 |
 | `map.setView('3d' \| '2d' \| 'walk')` | 보기 바꾸기 |
 | `map.walkAt({ x, z, look: { building } })` | 지상 시점으로 그 자리에 서서 건물(또는 `look: { x, z }`)을 바라보기 |
+| `map.faces('니콜스관')` | 건물의 면(북·동·남·서)과 층 목록 |
+| `map.paint([{ building, side, floor, color }])` | 건물 벽의 그 면·층을 색으로 덮기(`color: null`이면 지우기). 기본 지도는 바뀌지 않아요 |
+| `map.clearPaint()`, `map.showPaint(false)` | 칠 모두 지우기 / 잠깐 숨기기(원래 모습 보기) |
 | `map.buildings()` | 건물 목록 `[{ id, code, name, floors, indoor: [층...] }]` |
-| `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor` |
+| `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor`. 입체 보기에서 건물 벽을 누르면 `e.side`(면), `e.level`(층)도 |
 | `map.on('pinClick', e => …)` | 핀을 누르면 `e.id` |
 
 모든 명령은 Promise를 돌려줘요. 찾을 수 없는 방·건물이면 오류 메시지와 함께 실패해요.
