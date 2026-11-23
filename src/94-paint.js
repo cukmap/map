@@ -68,10 +68,11 @@ function sheetsOf(b){if(b._sheets)return b._sheets;const out=[];if(!b.poly)retur
   if(!E.length)continue;const turn=(a,c)=>Math.acos(Math.max(-1,Math.min(1,a.d[0]*c.d[0]+a.d[1]*c.d[1])));
   // 크게 꺾이는 곳에서 시작하도록 돌린 뒤 자른다
   let st=E.findIndex((e,i)=>turn(E[(i-1+E.length)%E.length],e)>CUT);if(st<0)st=0;const R=E.slice(st).concat(E.slice(0,st));
-  let cur=[];const flush=()=>{if(!cur.length)return;let c=0;const segs=cur.map(e=>{const o={...e,s0:c};c+=e.L;return o});if(c>=3)out.push({id:`${b.code||b.name}-${gi}-${out.length}`,b,segs,L:c,y0:g.y0,y1:g.y1,sg});cur=[]};
+  let cur=[];const flush=()=>{if(!cur.length)return;let c=0;const segs=cur.map(e=>{const o={...e,s0:c};c+=e.L;return o});if(c>=3)out.push({id:`${b.code||b.name}-${gi}-${out.length}`,b,segs,L:c,y0:g.y0,y1:g.y1,sg,flip:sg>0,off:SHOFF});cur=[]};
   R.forEach((e,i)=>{if(i&&turn(R[i-1],e)>CUT)flush();cur.push(e)});flush();gi++}
  return b._sheets=out}
-function sheetMesh(S){const m=[],H0=S.y1-S.y0;for(const e of S.segs){const nx=S.sg*e.d[1],nz=-S.sg*e.d[0],P=(pt,y)=>[pt[0]+nx*SHOFF,y,pt[1]+nz*SHOFF],u0=e.s0/S.L,u1=(e.s0+e.L)/S.L;
+// 밖에서 벽을 바라볼 때 도화지 왼쪽 = 화면 왼쪽이 되도록 외곽선 방향에 따라 가로를 뒤집는다(flip)
+function sheetMesh(S){const m=[],H0=S.y1-S.y0,U=u=>S.flip?1-u:u;for(const e of S.segs){const nx=S.sg*e.d[1],nz=-S.sg*e.d[0],P=(pt,y)=>[pt[0]+nx*S.off,y,pt[1]+nz*S.off],u0=U(e.s0/S.L),u1=U((e.s0+e.L)/S.L);
   const A=P(e.p,S.y0),Bq=P(e.q,S.y0),C=P(e.q,S.y1),D=P(e.p,S.y1),N=[nx,0,nz],c=[1,1,1];
   for(const [v,uv] of [[A,[u0,0]],[Bq,[u1,0]],[C,[u1,1]],[A,[u0,0]],[C,[u1,1]],[D,[u0,1]]])m.push(...v,...N,...c,...uv)}
  return upload(m)}
@@ -84,14 +85,15 @@ const prevC=globalThis.__CAN;globalThis.__CAN=()=>{prevC&&prevC();if(!sheetOn||!
  for(const S of SHEETS.values()){if(!S.obj)S.obj=sheetMesh(S);if(!S.tex&&!blank)continue;gl.bindTexture(gl.TEXTURE_2D,S.tex||WHITE);renderObj(S.obj,camera.mvp,2.05)} // 2.05 = 벽 도화지 전용(투명한 곳은 버림)
  gl.disable(gl.POLYGON_OFFSET_FILL)};
 const floorLines=S=>{const b=S.b,lv=b.lv;if(!lv)return[];const a=[];for(let k=-(b.basementFloors||0);k<=(b.floors||0);k++){const y=lv.datum+(k-(k>0?1:0))*lv.fh;if(k===0)continue;const v=y-S.y0;if(v>0&&v<S.y1-S.y0)a.push({floor:k>0?k+'F':'B'+(-k),v:+v.toFixed(2)})}return a};
-const sheetInfo=S=>({id:S.id,building:S.b.name,length:+S.L.toFixed(2),height:+(S.y1-S.y0).toFixed(2),folds:S.segs.slice(1).filter((e,i)=>Math.acos(Math.max(-1,Math.min(1,S.segs[i].d[0]*e.d[0]+S.segs[i].d[1]*e.d[1])))>.25).map(e=>+e.s0.toFixed(2)),floors:floorLines(S)});
+const sheetInfo=S=>({id:S.id,building:S.b.name,length:+S.L.toFixed(2),height:+(S.y1-S.y0).toFixed(2),folds:S.segs.slice(1).filter((e,i)=>Math.acos(Math.max(-1,Math.min(1,S.segs[i].d[0]*e.d[0]+S.segs[i].d[1]*e.d[1])))>.25).map(e=>+(S.flip?S.L-e.s0:e.s0).toFixed(2)).sort((a,b)=>a-b),floors:floorLines(S)});
 // 명령: 도화지 목록·보이기·그림 입히기
 function sheets(o){o=o||{};const names=[].concat(o.buildings||o.building||[]),res=[];for(const n of names){const b=PK.findB(n);if(!b)throw new Error('건물을 찾지 못했어요: '+n);for(const S of sheetsOf(b)){SHEETS.set(S.id,S);res.push(sheetInfo(S))}}
  if(o.show!==false)sheetOn=true;return res}
-function sheetPaint(id,url){const S=SHEETS.get(id);if(!S)throw new Error('도화지를 찾지 못했어요: '+id);return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{if(S.tex)gl.deleteTexture(S.tex);S.tex=texFrom(im);ok(true)};im.onerror=()=>no(new Error('그림을 읽지 못했어요.'));im.src=url})}
+// o.front: 기둥·띠 같은 튀어나온 것보다 앞에 현수막처럼 건다(그림이 가려지지 않게)
+function sheetPaint(id,url,o){const S=SHEETS.get(id);if(!S)throw new Error('도화지를 찾지 못했어요: '+id);const off=o&&o.front?.9:SHOFF;if(off!==S.off){S.off=off;S.obj=null}return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{if(S.tex)gl.deleteTexture(S.tex);S.tex=texFrom(im);ok(true)};im.onerror=()=>no(new Error('그림을 읽지 못했어요.'));im.src=url})}
 function showSheets(on,o){sheetOn=on!==false;if(o&&'blank' in o)blank=!!o.blank;return sheetOn}
 // 3D에서 누른 점이 어느 도화지의 어디(u, v m)인지
 globalThis.__SHEETAT=(b,x,y,z)=>{if(!sheetOn||!b||!isFinite(y))return null;let best=null;for(const S of sheetsOf(b)){if(!SHEETS.has(S.id))continue;for(const e of S.segs){const t=Math.max(0,Math.min(1,((x-e.p[0])*e.d[0]+(z-e.p[1])*e.d[1])/e.L)),d=Math.hypot(e.p[0]+e.d[0]*e.L*t-x,e.p[1]+e.d[1]*e.L*t-z);if(!best||d<best.d)best={d,S,u:e.s0+t*e.L}}}
- if(!best||best.d>3)return null;return {sheet:best.S.id,su:+best.u.toFixed(2),sv:+Math.max(0,Math.min(best.S.y1-best.S.y0,y-best.S.y0)).toFixed(2)}};
+ if(!best||best.d>3)return null;return {sheet:best.S.id,su:+(best.S.flip?best.S.L-best.u:best.u).toFixed(2),sv:+Math.max(0,Math.min(best.S.y1-best.S.y0,y-best.S.y0)).toFixed(2)}};
 Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint,shape,sheets,sheetPaint,showSheets});
 })()}

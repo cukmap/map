@@ -65,7 +65,7 @@
       showPaint: function (on) { return call('showPaint', on); },
       shape: function (o) { return call('shape', o); },
       sheets: function (o) { return call('sheets', o); },
-      sheetPaint: function (id, url) { return call('sheetPaint', id, url); },
+      sheetPaint: function (id, url, o) { return call('sheetPaint', id, url, o); },
       showSheets: function (on, o) { return call('showSheets', on, o); },
       /** 건물 목록: [{id, code, name, floors, indoor:[층...]}] */
       buildings: function () { return call('buildings'); },

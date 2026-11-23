@@ -53,7 +53,7 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 | `map.clearPaint()`, `map.showPaint(false)` | 칠 모두 지우기 / 잠깐 숨기기(원래 모습 보기) |
 | `map.shape({ x0, z0, x1, z1, step, indoor })` | 그 범위의 지형 높이 격자와 건물 모양(외곽·바닥·꼭대기 높이). `indoor: '니콜스관'`이면 그 건물 실내(층별 벽·문·바닥·방 이름)도. 블록 세상처럼 나만의 화면을 만들 때 |
 | `map.sheets({ buildings: ['니콜스관'] })` | 건물 외벽을 크게 꺾이는 모서리에서 잘라 펼친 「벽 도화지」 목록(길이·높이·층 선·꺾인 곳) |
-| `map.sheetPaint(id, 그림주소)` | 그 도화지에 그림(PNG 등 data URL)을 입히기. 창·차양은 그림 앞에 그대로 남아요 |
+| `map.sheetPaint(id, 그림주소, { front })` | 그 도화지에 그림(PNG 등 data URL)을 입히기. 기본은 벽에 바로 칠한 것처럼(기둥·차양이 앞에 남음), `front: true`면 튀어나온 것보다 앞에 현수막처럼 걸어요 |
 | `map.showSheets(false)`, `map.showSheets(true, { blank: true })` | 도화지 잠깐 숨기기(원래 모습 보기) / 그림 없는 벽을 흰 도화지로 보이기. 그림의 투명한 부분으로는 원래 벽이 보여요. 입체 보기에서 벽을 누르면 클릭 알림에 `e.sheet`, `e.su`(가로 m), `e.sv`(높이 m) |
 | `map.buildings()` | 건물 목록 `[{ id, code, name, floors, indoor: [층...] }]` |
 | `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor`. 입체 보기에서 건물 벽을 누르면 `e.side`(면), `e.level`(층), `e.col`(세로 줄)도 |
