@@ -64,6 +64,9 @@
       clearPaint: function () { return call('clearPaint'); },
       showPaint: function (on) { return call('showPaint', on); },
       shape: function (o) { return call('shape', o); },
+      sheets: function (o) { return call('sheets', o); },
+      sheetPaint: function (id, url) { return call('sheetPaint', id, url); },
+      showSheets: function (on, o) { return call('showSheets', on, o); },
       /** 건물 목록: [{id, code, name, floors, indoor:[층...]}] */
       buildings: function () { return call('buildings'); },
       /** 이벤트: 'click'(지도 누름: x, z, floor, building), 'pinClick'(id) */

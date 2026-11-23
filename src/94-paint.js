@@ -53,5 +53,45 @@ function shape(o){o=o||{};const x0=+o.x0,z0=+o.z0,x1=+o.x1,z1=+o.z1,st=Math.max(
  let indoor=null;if(o.indoor&&typeof IB!=='undefined'){const bb=PK.findB(o.indoor),ib=bb&&IB.find(q=>q.bv===bb);if(ib){const d=ib.d,_lv=bb.lv,_top=Math.max(bb.floors||0,...d.floors.map(f=>{const m=/^(\d+)F$/.exec(f.id);return m?+m[1]:0}));
   indoor={building:bb.name,bounds:d.bounds,floors:d.floors.map(f=>({id:f.id,y:+(_lv?lvFloorY(_lv,f.id,_top):ib.base+f.y).toFixed(2),walls:f.walls,wins:f.wins||[],doors:(f.doors||[]).map(q=>q.slice(0,5)),slab:(f.slabs||[])[0]||null,stairs:f.stairs||[],labels:(f.labels||[]).map(l=>({id:l.id,name:l.name,x:l.x,z:l.z}))}))}}}
  return {x0,z0,step:st,nx,nz,heights:h,buildings:out,indoor}}
-Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint,shape});
+// ===== 벽 도화지 (2026-11-23): 건물 외벽을 「크게 꺾이는 모서리」에서 잘라 펼친 긴 띠. 띠 하나 = 도화지 한 장 =====
+// 외벽은 바닥 외곽을 위로 세운 모양이라, 휘거나 들쭉날쭉해도 찢지 않고 평평하게 펼칠 수 있다(u = 띠를 따라 간 거리, v = 높이).
+// 그림은 벽 바로 앞(3cm)에 얇게 입히고, 창·차양·기둥은 그 앞에 그대로 남는다.
+const SHEETS=new Map();let sheetOn=false;const SHOFF=.03,CUT=60*Math.PI/180;
+function sheetsOf(b){if(b._sheets)return b._sheets;const out=[];if(!b.poly)return b._sheets=out;
+ const groups=new Map();
+ if(b.spec){const lift=b.spec.lift||0,lvl1=b.spec.datum!=null?b.spec.datum:Math.min(...b.poly.map(p=>H(...p)))+lift;
+  for(const pt of b.spec.parts){const key=JSON.stringify(pt.poly.map(p=>[+p[0].toFixed(1),+p[1].toFixed(1)])),base=lvl1+(pt.base||0),top=base+pt.height,foot=Math.min(...pt.poly.map(p=>H(...p)))-.4,bot=pt.bottom>0?base+pt.bottom:foot;
+   const g=groups.get(key);if(g){g.y0=Math.min(g.y0,bot);g.y1=Math.max(g.y1,top)}else groups.set(key,{poly:pt.poly,y0:bot,y1:top})}}
+ else groups.set('0',{poly:b.poly,y0:(b.ground!=null?b.ground:Math.min(...b.poly.map(p=>H(...p)))-.4),y1:b.roof||((b.ground||0)+(b.h||10))});
+ let gi=0;for(const g of groups.values()){const P=g.poly,n=P.length,sg=ringSign(P),E=[];
+  for(let i=0;i<n;i++){const p=P[i],q=P[(i+1)%n],L=Math.hypot(q[0]-p[0],q[1]-p[1]);if(L<.05)continue;E.push({p,q,L,d:[(q[0]-p[0])/L,(q[1]-p[1])/L]})}
+  if(!E.length)continue;const turn=(a,c)=>Math.acos(Math.max(-1,Math.min(1,a.d[0]*c.d[0]+a.d[1]*c.d[1])));
+  // 크게 꺾이는 곳에서 시작하도록 돌린 뒤 자른다
+  let st=E.findIndex((e,i)=>turn(E[(i-1+E.length)%E.length],e)>CUT);if(st<0)st=0;const R=E.slice(st).concat(E.slice(0,st));
+  let cur=[];const flush=()=>{if(!cur.length)return;let c=0;const segs=cur.map(e=>{const o={...e,s0:c};c+=e.L;return o});if(c>=3)out.push({id:`${b.code||b.name}-${gi}-${out.length}`,b,segs,L:c,y0:g.y0,y1:g.y1,sg});cur=[]};
+  R.forEach((e,i)=>{if(i&&turn(R[i-1],e)>CUT)flush();cur.push(e)});flush();gi++}
+ return b._sheets=out}
+function sheetMesh(S){const m=[],H0=S.y1-S.y0;for(const e of S.segs){const nx=S.sg*e.d[1],nz=-S.sg*e.d[0],P=(pt,y)=>[pt[0]+nx*SHOFF,y,pt[1]+nz*SHOFF],u0=e.s0/S.L,u1=(e.s0+e.L)/S.L;
+  const A=P(e.p,S.y0),Bq=P(e.q,S.y0),C=P(e.q,S.y1),D=P(e.p,S.y1),N=[nx,0,nz],c=[1,1,1];
+  for(const [v,uv] of [[A,[u0,0]],[Bq,[u1,0]],[C,[u1,1]],[A,[u0,0]],[C,[u1,1]],[D,[u0,1]]])m.push(...v,...N,...c,...uv)}
+ return upload(m)}
+function texFrom(img,clear){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+ if(img)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(clear?[0,0,0,0]:[250,250,248,255]));gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);return t}
+let WHITE=null,CLEAR=null,blank=false; // blank: 그림 없는 도화지를 흰 벽으로 보여 줄지
+const prevC=globalThis.__CAN;globalThis.__CAN=()=>{prevC&&prevC();if(!sheetOn||!SHEETS.size)return;if(!WHITE){WHITE=texFrom(null);CLEAR=texFrom(null,true)}
+ gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(-1,-2);gl.activeTexture(gl.TEXTURE0);
+ for(const S of SHEETS.values()){if(!S.obj)S.obj=sheetMesh(S);if(!S.tex&&!blank)continue;gl.bindTexture(gl.TEXTURE_2D,S.tex||WHITE);renderObj(S.obj,camera.mvp,2.05)} // 2.05 = 벽 도화지 전용(투명한 곳은 버림)
+ gl.disable(gl.POLYGON_OFFSET_FILL)};
+const floorLines=S=>{const b=S.b,lv=b.lv;if(!lv)return[];const a=[];for(let k=-(b.basementFloors||0);k<=(b.floors||0);k++){const y=lv.datum+(k-(k>0?1:0))*lv.fh;if(k===0)continue;const v=y-S.y0;if(v>0&&v<S.y1-S.y0)a.push({floor:k>0?k+'F':'B'+(-k),v:+v.toFixed(2)})}return a};
+const sheetInfo=S=>({id:S.id,building:S.b.name,length:+S.L.toFixed(2),height:+(S.y1-S.y0).toFixed(2),folds:S.segs.slice(1).filter((e,i)=>Math.acos(Math.max(-1,Math.min(1,S.segs[i].d[0]*e.d[0]+S.segs[i].d[1]*e.d[1])))>.25).map(e=>+e.s0.toFixed(2)),floors:floorLines(S)});
+// 명령: 도화지 목록·보이기·그림 입히기
+function sheets(o){o=o||{};const names=[].concat(o.buildings||o.building||[]),res=[];for(const n of names){const b=PK.findB(n);if(!b)throw new Error('건물을 찾지 못했어요: '+n);for(const S of sheetsOf(b)){SHEETS.set(S.id,S);res.push(sheetInfo(S))}}
+ if(o.show!==false)sheetOn=true;return res}
+function sheetPaint(id,url){const S=SHEETS.get(id);if(!S)throw new Error('도화지를 찾지 못했어요: '+id);return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{if(S.tex)gl.deleteTexture(S.tex);S.tex=texFrom(im);ok(true)};im.onerror=()=>no(new Error('그림을 읽지 못했어요.'));im.src=url})}
+function showSheets(on,o){sheetOn=on!==false;if(o&&'blank' in o)blank=!!o.blank;return sheetOn}
+// 3D에서 누른 점이 어느 도화지의 어디(u, v m)인지
+globalThis.__SHEETAT=(b,x,y,z)=>{if(!sheetOn||!b||!isFinite(y))return null;let best=null;for(const S of sheetsOf(b)){if(!SHEETS.has(S.id))continue;for(const e of S.segs){const t=Math.max(0,Math.min(1,((x-e.p[0])*e.d[0]+(z-e.p[1])*e.d[1])/e.L)),d=Math.hypot(e.p[0]+e.d[0]*e.L*t-x,e.p[1]+e.d[1]*e.L*t-z);if(!best||d<best.d)best={d,S,u:e.s0+t*e.L}}}
+ if(!best||best.d>3)return null;return {sheet:best.S.id,su:+best.u.toFixed(2),sv:+Math.max(0,Math.min(best.S.y1-best.S.y0,y-best.S.y0)).toFixed(2)}};
+Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint,shape,sheets,sheetPaint,showSheets});
 })()}
