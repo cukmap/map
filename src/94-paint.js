@@ -49,6 +49,9 @@ function shape(o){o=o||{};const x0=+o.x0,z0=+o.z0,x1=+o.x1,z1=+o.z1,st=Math.max(
    for(const pt of b.spec.parts){const base=lvl1+(pt.base||0),top=base+pt.height,fh=Math.max(2.8,(pt.height-(pt.parapet>0?pt.parapet:0))/pt.floors);parts.push({poly:pt.poly,holes:pt.holes||[],bottom:pt.bottom>0?base+pt.bottom:(pt.pilotis?base+pt.pilotis*fh:null),top:+top.toFixed(2),wall:pt.wall||null,roof:pt.roofColor||null})}}
   else parts.push({poly:b.poly,holes:b.holes||[],bottom:null,top:+(b.roof||0).toFixed(2),wall:null,roof:null});
   out.push({name:b.name,code:b.code||null,parts})}
- return {x0,z0,step:st,nx,nz,heights:h,buildings:out}}
+ // 실내(도면이 있는 건물만): 층마다 벽·창·문 선분과 바닥 외곽, 방 이름. 화면에 보여 주는 지도와 같은 자료다
+ let indoor=null;if(o.indoor&&typeof IB!=='undefined'){const bb=PK.findB(o.indoor),ib=bb&&IB.find(q=>q.bv===bb);if(ib){const d=ib.d,_lv=bb.lv,_top=Math.max(bb.floors||0,...d.floors.map(f=>{const m=/^(\d+)F$/.exec(f.id);return m?+m[1]:0}));
+  indoor={building:bb.name,bounds:d.bounds,floors:d.floors.map(f=>({id:f.id,y:+(_lv?lvFloorY(_lv,f.id,_top):ib.base+f.y).toFixed(2),walls:f.walls,wins:f.wins||[],doors:(f.doors||[]).map(q=>q.slice(0,5)),slab:(f.slabs||[])[0]||null,stairs:f.stairs||[],labels:(f.labels||[]).map(l=>({id:l.id,name:l.name,x:l.x,z:l.z}))}))}}}
+ return {x0,z0,step:st,nx,nz,heights:h,buildings:out,indoor}}
 Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint,shape});
 })()}
