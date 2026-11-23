@@ -79,11 +79,12 @@ function sheetMesh(S){const m=[],H0=S.y1-S.y0,U=u=>S.flip?1-u:u;for(const e of S
 function texFrom(img,clear){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
  if(img)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(clear?[0,0,0,0]:[250,250,248,255]));gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);return t}
-let WHITE=null,CLEAR=null,blank=false; // blank: 그림 없는 도화지를 흰 벽으로 보여 줄지
+let WHITE=null,CLEAR=null,blank=false,sheetOp=1,uOp=null; // sheetOp: 그림 진하기(0 = 학교만, 1 = 그림 그대로) // blank: 그림 없는 도화지를 흰 벽으로 보여 줄지
 const prevC=globalThis.__CAN;globalThis.__CAN=()=>{prevC&&prevC();if(!sheetOn||!SHEETS.size)return;if(!WHITE){WHITE=texFrom(null);CLEAR=texFrom(null,true)}
+ if(sheetOp<=.01)return;if(!uOp)uOp=gl.getUniformLocation(program,'uOp');gl.uniform1f(uOp,sheetOp);if(sheetOp<.99){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false)}
  gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(-1,-2);gl.activeTexture(gl.TEXTURE0);
  for(const S of SHEETS.values()){if(!S.obj)S.obj=sheetMesh(S);if(!S.tex&&!blank)continue;gl.bindTexture(gl.TEXTURE_2D,S.tex||WHITE);renderObj(S.obj,camera.mvp,2.05)} // 2.05 = 벽 도화지 전용(투명한 곳은 버림)
- gl.disable(gl.POLYGON_OFFSET_FILL)};
+ gl.disable(gl.POLYGON_OFFSET_FILL);gl.disable(gl.BLEND);gl.depthMask(true)};
 const floorLines=S=>{const b=S.b,lv=b.lv;if(!lv)return[];const a=[];for(let k=-(b.basementFloors||0);k<=(b.floors||0);k++){const y=lv.datum+(k-(k>0?1:0))*lv.fh;if(k===0)continue;const v=y-S.y0;if(v>0&&v<S.y1-S.y0)a.push({floor:k>0?k+'F':'B'+(-k),v:+v.toFixed(2)})}return a};
 const sheetInfo=S=>({id:S.id,building:S.b.name,length:+S.L.toFixed(2),height:+(S.y1-S.y0).toFixed(2),folds:S.segs.slice(1).filter((e,i)=>Math.acos(Math.max(-1,Math.min(1,S.segs[i].d[0]*e.d[0]+S.segs[i].d[1]*e.d[1])))>.25).map(e=>+(S.flip?S.L-e.s0:e.s0).toFixed(2)).sort((a,b)=>a-b),floors:floorLines(S)});
 // 명령: 도화지 목록·보이기·그림 입히기
@@ -91,9 +92,10 @@ function sheets(o){o=o||{};const names=[].concat(o.buildings||o.building||[]),re
  if(o.show!==false)sheetOn=true;return res}
 // o.front: 기둥·띠 같은 튀어나온 것보다 앞에 현수막처럼 건다(그림이 가려지지 않게)
 function sheetPaint(id,url,o){const S=SHEETS.get(id);if(!S)throw new Error('도화지를 찾지 못했어요: '+id);const off=o&&o.front?.9:SHOFF;if(off!==S.off){S.off=off;S.obj=null}return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{if(S.tex)gl.deleteTexture(S.tex);S.tex=texFrom(im);ok(true)};im.onerror=()=>no(new Error('그림을 읽지 못했어요.'));im.src=url})}
+function sheetOpacity(v){sheetOp=Math.max(0,Math.min(1,+v));return sheetOp}
 function showSheets(on,o){sheetOn=on!==false;if(o&&'blank' in o)blank=!!o.blank;return sheetOn}
 // 3D에서 누른 점이 어느 도화지의 어디(u, v m)인지
 globalThis.__SHEETAT=(b,x,y,z)=>{if(!sheetOn||!b||!isFinite(y))return null;let best=null;for(const S of sheetsOf(b)){if(!SHEETS.has(S.id))continue;for(const e of S.segs){const t=Math.max(0,Math.min(1,((x-e.p[0])*e.d[0]+(z-e.p[1])*e.d[1])/e.L)),d=Math.hypot(e.p[0]+e.d[0]*e.L*t-x,e.p[1]+e.d[1]*e.L*t-z);if(!best||d<best.d)best={d,S,u:e.s0+t*e.L}}}
  if(!best||best.d>3)return null;return {sheet:best.S.id,su:+(best.S.flip?best.S.L-best.u:best.u).toFixed(2),sv:+Math.max(0,Math.min(best.S.y1-best.S.y0,y-best.S.y0)).toFixed(2)}};
-Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint,shape,sheets,sheetPaint,showSheets});
+Object.assign(globalThis.__KIT||{},{faces,paint,clearPaint,showPaint,shape,sheets,sheetPaint,showSheets,sheetOpacity});
 })()}
