@@ -88,8 +88,9 @@ const meOut = (u, now, notices) => u && ({ name: u.name, ink: +inkNow(u, now).to
 
 // ---------- 읽기
 async function state(req, env, url, now) {
-  const since = Math.max(0, +url.searchParams.get('since') || 0);
-  const patches = (await env.DB.prepare('SELECT id, sheet, name, at, x, y, w, h, front, mode FROM cv_patches WHERE hidden = 0 AND id > ? ORDER BY id LIMIT 2000').bind(since).all()).results;
+  const since = Math.max(0, +url.searchParams.get('since') || 0), until = +url.searchParams.get('until') || 9e15;
+  // until(ms): 그 시각까지의 모습(기록 보기·타임랩스용). 모든 장에 시각이 있어서 어느 순간이든 다시 만들 수 있다
+  const patches = (await env.DB.prepare('SELECT id, sheet, name, at, x, y, w, h, front, mode FROM cv_patches WHERE hidden = 0 AND id > ? AND at <= ? ORDER BY id LIMIT 5000').bind(since, until).all()).results;
   const hidden = (await env.DB.prepare('SELECT id FROM cv_patches WHERE hidden > 0').all()).results.map(r => r.id);
   const props = (await env.DB.prepare('SELECT id, name, type, x, z, rot, at FROM cv_props WHERE hidden = 0 AND removed = 0 ORDER BY id').all()).results;
   const w = await env.DB.prepare('SELECT kind, name, at, until FROM cv_weather WHERE id = 1').first();
