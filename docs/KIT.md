@@ -55,6 +55,7 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 | `map.sheets({ buildings: ['니콜스관'] })` | 건물 외벽을 크게 꺾이는 모서리에서 잘라 펼친 「벽 도화지」 목록(길이·높이·층 선·꺾인 곳) |
 | `map.sheetPaint(id, 그림주소, { front })` | 그 도화지에 그림(PNG 등 data URL)을 입히기. 기본은 벽에 바로 칠한 것처럼(기둥·차양이 앞에 남음), `front: true`면 튀어나온 것보다 앞에 현수막처럼 걸어요 |
 | `map.sheetOpacity(0~1)` | 벽 그림 진하기. 0이면 학교 모습만, 1이면 그림 그대로 |
+| `map.plain(0~1)` | 하얀 학교. 1이면 건물·땅·나무가 석고 모형처럼 하얗게 보여요(칠한 벽 도화지는 그대로). 0이면 원래 색 |
 | `map.showSheets(false)`, `map.showSheets(true, { blank: true })` | 도화지 잠깐 숨기기(원래 모습 보기) / 그림 없는 벽을 흰 도화지로 보이기. 그림의 투명한 부분으로는 원래 벽이 보여요. 입체 보기에서 벽을 누르면 클릭 알림에 `e.sheet`, `e.su`(가로 m), `e.sv`(높이 m) |
 | `map.buildings()` | 건물 목록 `[{ id, code, name, floors, indoor: [층...] }]` |
 | `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor`. 입체 보기에서 건물 벽을 누르면 `e.side`(면), `e.level`(층), `e.col`(세로 줄)도 |

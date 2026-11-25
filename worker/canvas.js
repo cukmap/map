@@ -3,9 +3,10 @@
 //
 // 사람 구분: 브라우저가 처음 만든 무작위 값(x-canvas-id)을 해시해서 쓴다.
 //   학교 와이파이는 여러 사람이 같은 IP를 쓰므로 IP로 나누지 않는다. 가입·비밀번호는 없다.
-// 그림: 한 번 「벽에 입히기」 할 때마다 새로 칠한 부분만 잘라 한 장(patch)으로 저장한다.
-//   벽 모습 = 그 벽의 patch를 오래된 것부터 겹친 것. 덮어쓰기는 위에 새로 칠하는 것으로 된다.
-//   신고가 모이면 그 한 장만 숨겨지고, 그 밑에 있던 그림이 다시 보인다.
+// 그림: 벽마다 하나의 판을 모두가 같이 쓴다(r/place처럼). 펜을 뗄 때마다 방금 칠한 부분만 잘라 한 장(patch)으로 올리고,
+//   다른 사람 화면은 몇 초마다 새 장을 받아 겹친다. 벽 모습 = 그 벽의 patch를 오래된 것부터 겹친 것.
+//   덮어쓰기 = 위에 칠하기, 지우기 = mode 'erase' 장(그 모양만큼 원래 벽이 보이게). 모든 장에 시각이 있어 나중에 그 시점 모습을 다시 만들 수 있다.
+//   (신고 기능은 서버에 남겨 두지만 화면에서는 쓰지 않는다. 덧칠이 기본 해결책)
 // 물감: 시간마다 차오른다(INK_MAX까지). 퀴즈 보상은 INK_MAX를 넘겨 INK_CAP까지 쌓인다.
 
 import { QUIZ } from './canvas-quiz.js';
@@ -20,6 +21,8 @@ const R = {
   AGREE_N: 3, AGREE_SHARE: 2 / 3,   // 같은 답이 3명 이상이고 전체의 2/3 이상이면 확정
   HIDE_AT: 3,                       // 「부적절해요」 이만큼이면 숨김
   PATCH_BYTES: 1500000,             // 한 장 최대 크기
+  PATCH_PER_MIN: 150,               // 펜을 뗄 때마다 올리므로 넉넉히(프로그램 도배만 막음)
+  PRESENCE_MS: 25000,               // 이 안에 신호를 보낸 사람 = 지금 그리는 중
   PROPS: { tree: { name: '크리스마스 트리', cost: 5 }, snowman: { name: '눈사람', cost: 3 }, gift: { name: '선물 상자', cost: 1 }, lamp: { name: '가로등 장식', cost: 2 } },
   PROP_NEAR_M: 4, PROP_NEAR_N: 3,   // 반지름 4m 안에 3개까지
   PROP_PER_USER: 10,
@@ -37,10 +40,13 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS cv_quiz_done (uid TEXT NOT NULL, qid TEXT NOT NULL, ok INTEGER NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (uid, qid))`,
   `CREATE TABLE IF NOT EXISTS cv_answers (qkey TEXT NOT NULL, uid TEXT NOT NULL, value TEXT NOT NULL, at INTEGER NOT NULL, paid INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (qkey, uid))`,
   `CREATE TABLE IF NOT EXISTS cv_confirmed (qkey TEXT PRIMARY KEY, value TEXT NOT NULL, n INTEGER NOT NULL, at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS cv_feed (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, text TEXT NOT NULL)`
+  `CREATE TABLE IF NOT EXISTS cv_feed (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, text TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS cv_presence (uid TEXT PRIMARY KEY, sheet TEXT, at INTEGER NOT NULL)`
 ];
+// 나중에 더한 칸(이미 만들어진 표에도 붙인다. 이미 있으면 오류가 나므로 무시)
+const ALTER = [`ALTER TABLE cv_patches ADD COLUMN mode TEXT NOT NULL DEFAULT 'paint'`];
 let ready = false;
-async function ensure(db) { if (ready) return; await db.batch(SCHEMA.map(s => db.prepare(s))); ready = true; }
+async function ensure(db) { if (ready) return; await db.batch(SCHEMA.map(s => db.prepare(s))); for (const a of ALTER) { try { await db.prepare(a).run(); } catch (_) {} } ready = true; }
 
 // ---------- 공통
 function cors(req, env) {
@@ -83,8 +89,8 @@ const meOut = (u, now, notices) => u && ({ name: u.name, ink: +inkNow(u, now).to
 // ---------- 읽기
 async function state(req, env, url, now) {
   const since = Math.max(0, +url.searchParams.get('since') || 0);
-  const patches = (await env.DB.prepare('SELECT id, sheet, name, at, x, y, w, h, front FROM cv_patches WHERE hidden = 0 AND id > ? ORDER BY id LIMIT 2000').bind(since).all()).results;
-  const hidden = (await env.DB.prepare('SELECT id FROM cv_patches WHERE hidden = 1').all()).results.map(r => r.id);
+  const patches = (await env.DB.prepare('SELECT id, sheet, name, at, x, y, w, h, front, mode FROM cv_patches WHERE hidden = 0 AND id > ? ORDER BY id LIMIT 2000').bind(since).all()).results;
+  const hidden = (await env.DB.prepare('SELECT id FROM cv_patches WHERE hidden > 0').all()).results.map(r => r.id);
   const props = (await env.DB.prepare('SELECT id, name, type, x, z, rot, at FROM cv_props WHERE hidden = 0 AND removed = 0 ORDER BY id').all()).results;
   const w = await env.DB.prepare('SELECT kind, name, at, until FROM cv_weather WHERE id = 1').first();
   const weather = w && w.until > now ? w : { kind: 'clear', name: null, at: 0, until: 0 };
@@ -92,7 +98,8 @@ async function state(req, env, url, now) {
   const u = await user(req, env, now, false), notices = u ? await payAnswers(env, u) : [];
   const mine = u ? (await env.DB.prepare('SELECT id FROM cv_patches WHERE uid = ?').bind(u.uid).all()).results.map(r => r.id) : [];
   const myProps = u ? (await env.DB.prepare('SELECT id FROM cv_props WHERE uid = ? AND removed = 0').bind(u.uid).all()).results.map(r => r.id) : [];
-  return json({ now, patches, hidden, props, weather, feed: recent, me: meOut(u, now, notices), mine, myProps,
+  const presence = (await env.DB.prepare('SELECT sheet, COUNT(*) AS n FROM cv_presence WHERE at > ? AND sheet IS NOT NULL GROUP BY sheet').bind(now - R.PRESENCE_MS).all()).results;
+  return json({ now, patches, hidden, props, weather, feed: recent, presence, me: meOut(u, now, notices), mine, myProps,
     rules: { PPM: R.PPM, INK_MAX: R.INK_MAX, INK_PER_H: R.INK_PER_H, INK_CAP: R.INK_CAP, QUIZ_INK: R.QUIZ_INK, ANSWER_PT: R.ANSWER_PT, PROPS: R.PROPS, WEATHER: R.WEATHER, WEATHER_COST: R.WEATHER_COST, WEATHER_MS: R.WEATHER_MS } });
 }
 async function patchImg(env, id) {
@@ -130,11 +137,29 @@ async function addPatch(req, env, now) {
   if (!u.admin && area > ink + 1e-6) return err(`물감이 ${(area - ink).toFixed(1)}㎡ 모자라요.`, 402, { me: meOut(u, now) });
   // 프로그램 도배만 막는다: 1분에 20장
   const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM cv_patches WHERE uid = ? AND at > ?').bind(u.uid, now - 60000).first();
-  if (n.n >= 20) return err('잠시 후 다시 시도해 주세요.', 429);
-  const r = await env.DB.prepare('INSERT INTO cv_patches (sheet, uid, name, at, x, y, w, h, front, area, img) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id').bind(sheet, u.uid, nm(u), now, x, y, w, h, b.front === false ? 0 : 1, area, img).first();
+  if (n.n >= R.PATCH_PER_MIN) return err('잠시 후 다시 시도해 주세요.', 429);
+  const mode = b.mode === 'erase' ? 'erase' : 'paint';
+  const r = await env.DB.prepare('INSERT INTO cv_patches (sheet, uid, name, at, x, y, w, h, front, area, img, mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id').bind(sheet, u.uid, nm(u), now, x, y, w, h, b.front === false ? 0 : 1, area, img, mode).first();
   if (!u.admin) { u.ink = ink - area; u.ink_at = now; await setInk(env, u, u.ink, now); }
   if (b.label) await feed(env, now, `${nm(u)} 님이 ${clean(b.label, 40)}에 그림을 입혔어요`);
-  return json({ patch: { id: r.id, sheet, name: nm(u), at: now, x, y, w, h, front: b.front === false ? 0 : 1 }, me: meOut(u, now) }, 201);
+  return json({ patch: { id: r.id, sheet, name: nm(u), at: now, x, y, w, h, front: b.front === false ? 0 : 1, mode }, me: meOut(u, now) }, 201);
+}
+// 되돌리기: 내가 올린 장을 지우고(hidden = 2) 쓴 물감을 돌려준다. 그 위에 남이 칠한 것은 그대로
+async function delPatch(req, env, now, id) {
+  const u = await user(req, env, now, false); if (!u) return err('기기 값이 없어요.', 401);
+  const p = await env.DB.prepare('SELECT area FROM cv_patches WHERE id = ? AND uid = ? AND hidden = 0').bind(id, u.uid).first();
+  if (!p) return err('내가 칠한 것만 되돌릴 수 있어요.', 403);
+  await env.DB.prepare('UPDATE cv_patches SET hidden = 2 WHERE id = ?').bind(id).run();
+  if (!u.admin) { const ink = Math.min(R.INK_CAP, inkNow(u, now) + p.area); u.ink = ink; u.ink_at = now; await setInk(env, u, ink, now); }
+  return json({ ok: true, me: meOut(u, now) });
+}
+// 지금 그리는 중: 편집기를 연 동안 몇 초마다 보낸다(sheet = null 이면 닫음)
+async function presence(req, env, now) {
+  const b = await body(req) || {};
+  const u = await user(req, env, now, true); if (!u) return err('기기 값이 없어요.', 401);
+  const sheet = b.sheet ? clean(b.sheet, 80) : null;
+  await env.DB.prepare('INSERT INTO cv_presence (uid, sheet, at) VALUES (?,?,?) ON CONFLICT(uid) DO UPDATE SET sheet = excluded.sheet, at = excluded.at').bind(u.uid, sheet, now).run();
+  return json({ ok: true });
 }
 
 async function flag(req, env, now) {
@@ -260,6 +285,8 @@ async function route(request, env, p) {
     let m = q.match(/^\/patch\/(\d+)\.png$/); if (m && M === 'GET') return await patchImg(env, +m[1]);
     if (q === '/me' && M === 'POST') return await setMe(request, env, now);
     if (q === '/patches' && M === 'POST') return await addPatch(request, env, now);
+    m = q.match(/^\/patches\/(\d+)$/); if (m && M === 'DELETE') return await delPatch(request, env, now, +m[1]);
+    if (q === '/presence' && M === 'POST') return await presence(request, env, now);
     if (q === '/flag' && M === 'POST') return await flag(request, env, now);
     if (q === '/quizzes' && M === 'GET') return await quizzes(request, env, now);
     if (q === '/quiz' && M === 'POST') return await solve(request, env, now);

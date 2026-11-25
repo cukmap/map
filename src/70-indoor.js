@@ -13,7 +13,7 @@ function renderSkip(obj,mvp,aerial,kind){const bs=uniSkip();if(!bs.length){rende
  const R=bs.map(b=>kind==='m'?[b._rg[0],b._rg[1]]:[b._rg[2],b._rg[3]]).filter(r=>r[1]>r[0]).sort((a,b)=>a[0]-b[0]);
  gl.bindBuffer(gl.ARRAY_BUFFER,obj.buffer);
  for(let [l,o,z] of [[loc.pos,0,3],[loc.nor,12,3],[loc.col,24,3],[loc.uv,36,2]]){gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,z,gl.FLOAT,false,44,o)}
- gl.uniformMatrix4fv(loc.mvp,false,mvp);gl.uniform1f(loc.aerial,aerial);let c=0;for(const [s0,e0] of R){if(s0>c)gl.drawArrays(gl.TRIANGLES,c,s0-c);c=Math.max(c,e0)}if(obj.n>c)gl.drawArrays(gl.TRIANGLES,c,obj.n-c)}
+ gl.uniformMatrix4fv(loc.mvp,false,mvp);gl.uniform1f(loc.aerial,aerial);gl.uniform1f(loc.plain,globalThis.__PLAIN||0);let c=0;for(const [s0,e0] of R){if(s0>c)gl.drawArrays(gl.TRIANGLES,c,s0-c);c=Math.max(c,e0)}if(obj.n>c)gl.drawArrays(gl.TRIANGLES,c,obj.n-c)}
 async function inflateB64(b64){const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));return new Uint8Array(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer())}
 function upT(dst,a,b,c,col,uv){const ny=(b[2]-a[2])*(c[0]-a[0])-(b[0]-a[0])*(c[2]-a[2]);if(ny>=0)pushTri(dst,a,b,c,col,uv);else pushTri(dst,a,c,b,col,uv?[uv[0],uv[2],uv[1]]:null)}
 function boxSeg(dst,x1,z1,x2,z2,th,y0,y1,col,topCol){const L=Math.hypot(x2-x1,z2-z1);if(L<.05)return;const ux=(x2-x1)/L,uz=(z2-z1)/L,nx=-uz*th/2,nz=ux*th/2,ex=ux*th*.3,ez=uz*th*.3;
