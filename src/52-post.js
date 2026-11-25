@@ -5,6 +5,7 @@
 //  ③ 공기 원근: 멀수록 하늘색으로 옅어짐
 //  ④ 색 보정: 밝은 곳이 하얗게 날아가지 않게 누르고(ACES), 채도·따뜻함을 조금
 //  ⑤ 계단 현상 줄이기(FXAA): 그림으로 그리면 기본 안티에일리어싱이 꺼지므로 대신 넣는다
+//  ⑥ 질감: 나무 잎 뭉치·벽 얼룩·땅 얼룩을 위치 기반 잡음으로(50-renderer 셰이더, uNext)
 // 깊이 그림(WEBGL_depth_texture)을 못 쓰는 기기에서는 아무것도 하지 않는다.
 (()=>{
 const want=(()=>{try{const q=new URLSearchParams(location.search);if(q.has('look'))return q.get('look')==='next';return localStorage.getItem('cukmap.look')==='next'}catch(_){return false}})();
@@ -38,7 +39,7 @@ for(int i=0;i<12;i++){float fi=float(i);float th=ang+fi*2.39996;float z=fract(fi
  vec3 hp=wpos(su);float dq=length(uEye-q),dh=length(uEye-hp);if(dh<dq-.05){float range=smoothstep(0.,1.,r*1.6/max(.001,dq-dh));occ+=range;}}
 float ao=1.-occ/12.;gl_FragColor=vec4(vec3(ao),1.);}`;
 // ②~⑤ 마무리
-const FIN=COMMON+`uniform sampler2D uC;uniform sampler2D uA;uniform vec3 uSun;uniform float uFocus;
+const FIN=COMMON+`uniform sampler2D uC;uniform sampler2D uA;uniform vec3 uSun;uniform float uFocus;uniform float uAOon;
 vec3 fxaa(vec2 uv){vec2 px=1./uRes;vec3 L=vec3(.299,.587,.114);vec3 cM=texture2D(uC,uv).rgb;
  float lM=dot(cM,L),lNW=dot(texture2D(uC,uv+vec2(-1.,-1.)*px).rgb,L),lNE=dot(texture2D(uC,uv+vec2(1.,-1.)*px).rgb,L),lSW=dot(texture2D(uC,uv+vec2(-1.,1.)*px).rgb,L),lSE=dot(texture2D(uC,uv+vec2(1.,1.)*px).rgb,L);
  float mn=min(lM,min(min(lNW,lNE),min(lSW,lSE))),mx=max(lM,max(max(lNW,lNE),max(lSW,lSE)));if(mx-mn<max(.0312,mx*.125))return cM;
@@ -51,7 +52,7 @@ void main(){float d=texture2D(uD,vUv).r;vec3 col;
  else{col=fxaa(vUv);vec3 p=wpos(vUv);
   // 주변 가림을 깊이가 비슷한 이웃끼리만 흐려서 얼룩을 없앤다
   vec2 px=2./uRes;float dl=length(uEye-p),s=0.,wsum=0.;for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++){vec2 o=vec2(float(i),float(j))*px;float w=1./(1.+abs(length(uEye-wpos(vUv+o))-dl)*4.);s+=texture2D(uA,vUv+o).r*w;wsum+=w;}
-  float ao=s/wsum;col*=mix(1.,ao,.6);
+  float ao=s/wsum;col*=mix(1.,ao,.6*uAOon);
   vec3 dir=normalize(p-uEye);float haze=(1.-exp(-max(0.,dl-uFocus)*.0009))*.5;col=mix(col,sky(normalize(vec3(dir.x,max(dir.y,.02),dir.z))),haze);}
  col=clamp(col*1.03,0.,1.);col=mix(col,col*col*(3.-2.*col),.3);float l=dot(col,vec3(.299,.587,.114));col=mix(vec3(l),col,1.14);col*=vec3(1.02,1.,.97);
  vec2 v=vUv-.5;col*=1.-dot(v,v)*.28;gl_FragColor=vec4(col,1.);}`;
@@ -63,15 +64,19 @@ try{
 function inv(m){const a=m,o=new Float32Array(16);const b00=a[0]*a[5]-a[1]*a[4],b01=a[0]*a[6]-a[2]*a[4],b02=a[0]*a[7]-a[3]*a[4],b03=a[1]*a[6]-a[2]*a[5],b04=a[1]*a[7]-a[3]*a[5],b05=a[2]*a[7]-a[3]*a[6],b06=a[8]*a[13]-a[9]*a[12],b07=a[8]*a[14]-a[10]*a[12],b08=a[8]*a[15]-a[11]*a[12],b09=a[9]*a[14]-a[10]*a[13],b10=a[9]*a[15]-a[11]*a[13],b11=a[10]*a[15]-a[11]*a[14];let det=b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06;if(!det)return null;det=1/det;
   o[0]=(a[5]*b11-a[6]*b10+a[7]*b09)*det;o[1]=(a[2]*b10-a[1]*b11-a[3]*b09)*det;o[2]=(a[13]*b05-a[14]*b04+a[15]*b03)*det;o[3]=(a[10]*b04-a[9]*b05-a[11]*b03)*det;o[4]=(a[6]*b08-a[4]*b11-a[7]*b07)*det;o[5]=(a[0]*b11-a[2]*b08+a[3]*b07)*det;o[6]=(a[14]*b02-a[12]*b05-a[15]*b01)*det;o[7]=(a[8]*b05-a[10]*b02+a[11]*b01)*det;o[8]=(a[4]*b10-a[5]*b08+a[7]*b06)*det;o[9]=(a[1]*b08-a[0]*b10-a[3]*b06)*det;o[10]=(a[12]*b04-a[13]*b02+a[15]*b00)*det;o[11]=(a[9]*b02-a[8]*b04-a[11]*b00)*det;o[12]=(a[5]*b07-a[4]*b09-a[6]*b06)*det;o[13]=(a[0]*b09-a[1]*b07+a[2]*b06)*det;o[14]=(a[13]*b01-a[12]*b03-a[14]*b00)*det;o[15]=(a[8]*b03-a[9]*b01+a[11]*b00)*det;return o}
 let broken=false;
-globalThis.__PRE=(mvp,eye)=>{if(broken)return;const w=canvas.width,h=canvas.height;if((w!==W||h!==H)&&!alloc(w,h)){broken=true;console.warn('look=next: 그림판을 만들지 못해 끕니다');return}
+let marked=false;
+globalThis.__PRE=(mvp,eye)=>{if(broken)return;if(!marked){marked=true;try{forest.__kind=1;build.__kind=2;roofObj.__kind=2;ter.__kind=3}catch(_){}}const w=canvas.width,h=canvas.height;if((w!==W||h!==H)&&!alloc(w,h)){broken=true;console.warn('look=next: 그림판을 만들지 못해 끕니다');return}
   VP=mvp;IVP=inv(mvp);EYE=eye;inFrame=true;real(gl.FRAMEBUFFER,fb);gl.viewport(0,0,W,H)};
 const sun=(()=>{const v=[-.5,.72,.48],l=Math.hypot(...v);return v.map(x=>x/l)})();
 function use(p,uv){gl.useProgram(p);gl.bindBuffer(gl.ARRAY_BUFFER,qb);for(let i=0;i<4;i++)gl.disableVertexAttribArray(i);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
   const U=n=>gl.getUniformLocation(p,n);gl.uniformMatrix4fv(U('uIVP'),false,IVP);gl.uniformMatrix4fv(U('uVP'),false,VP);gl.uniform3fv(U('uEye'),EYE);gl.uniform2f(U('uRes'),uv[0],uv[1]);
   gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,dtex);gl.uniform1i(U('uD'),6);return U}
+// 느린 기기 보호: 처음 4초 동안 화면이 초당 22장보다 느리면 가장 무거운 주변 가림을 끈다
+let aoOn=true,t0=0,tl=0,nf=0,slow=0;
 globalThis.__POST=()=>{if(!inFrame)return;inFrame=false;if(!IVP){real(gl.FRAMEBUFFER,null);return}
+  const now=performance.now();if(tl&&aoOn&&!document.hidden){const dt=now-tl;if(!t0)t0=now;if(now-t0<4000){nf++;if(dt>45)slow++}else if(nf>20&&slow/nf>.6){aoOn=false;console.info('look=next: 느린 기기라 주변 가림을 껐어요')}}tl=now;
   gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);
-  real(gl.FRAMEBUFFER,afb);gl.viewport(0,0,Math.max(1,W>>1),Math.max(1,H>>1));use(pa,[W/2,H/2]);gl.drawArrays(gl.TRIANGLES,0,6);
-  real(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);const U=use(pf,[W,H]);gl.activeTexture(gl.TEXTURE7);gl.bindTexture(gl.TEXTURE_2D,ctex);gl.uniform1i(U('uC'),7);gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,atex);gl.uniform1i(U('uA'),4);gl.uniform3fv(U('uSun'),sun);const C=globalThis.__SA;gl.uniform1f(U('uFocus'),C&&C.mode==='walk'?60:C&&C.dist?C.dist*1.1:300);gl.drawArrays(gl.TRIANGLES,0,6);
+  if(aoOn){real(gl.FRAMEBUFFER,afb);gl.viewport(0,0,Math.max(1,W>>1),Math.max(1,H>>1));use(pa,[W/2,H/2]);gl.drawArrays(gl.TRIANGLES,0,6);}
+  real(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);const U=use(pf,[W,H]);gl.activeTexture(gl.TEXTURE7);gl.bindTexture(gl.TEXTURE_2D,ctex);gl.uniform1i(U('uC'),7);gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,atex);gl.uniform1i(U('uA'),4);gl.uniform3fv(U('uSun'),sun);gl.uniform1f(U('uAOon'),aoOn?1:0);const C=globalThis.__SA;gl.uniform1f(U('uFocus'),C&&C.mode==='walk'?60:C&&C.dist?C.dist*1.1:300);gl.drawArrays(gl.TRIANGLES,0,6);
   gl.activeTexture(gl.TEXTURE0);gl.enable(gl.DEPTH_TEST);gl.useProgram(program)};
 })();
