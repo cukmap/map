@@ -22,7 +22,9 @@ const R = {
   HIDE_AT: 3,                       // 「부적절해요」 이만큼이면 숨김
   PATCH_BYTES: 1500000,             // 한 장 최대 크기
   PATCH_PER_MIN: 150,               // 펜을 뗄 때마다 올리므로 넉넉히(프로그램 도배만 막음)
-  PRESENCE_MS: 25000,               // 이 안에 신호를 보낸 사람 = 지금 그리는 중
+  PRESENCE_MS: 25000,
+  VOX_INK: 0.02,                    // 블록 한 칸(놓기·지우기·칠하기)에 드는 물감(㎡) → 30㎡ = 1,500칸
+  VOX_PER_REQ: 3000, VOX_PER_MIN: 120,               // 이 안에 신호를 보낸 사람 = 지금 그리는 중
   PROPS: { tree: { name: '크리스마스 트리', cost: 5 }, snowman: { name: '눈사람', cost: 3 }, gift: { name: '선물 상자', cost: 1 }, lamp: { name: '가로등 장식', cost: 2 } },
   PROP_NEAR_M: 4, PROP_NEAR_N: 3,   // 반지름 4m 안에 3개까지
   PROP_PER_USER: 10,
@@ -41,7 +43,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS cv_answers (qkey TEXT NOT NULL, uid TEXT NOT NULL, value TEXT NOT NULL, at INTEGER NOT NULL, paid INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (qkey, uid))`,
   `CREATE TABLE IF NOT EXISTS cv_confirmed (qkey TEXT PRIMARY KEY, value TEXT NOT NULL, n INTEGER NOT NULL, at INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS cv_feed (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, text TEXT NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS cv_presence (uid TEXT PRIMARY KEY, sheet TEXT, at INTEGER NOT NULL)`
+  `CREATE TABLE IF NOT EXISTS cv_presence (uid TEXT PRIMARY KEY, sheet TEXT, at INTEGER NOT NULL)`,
+  // 블록: 한 번에 바꾼 칸들을 한 줄로(cells = [[i,j,k,'#hex'|null],…] JSON). 순서대로 겹치면 지금 모습
+  `CREATE TABLE IF NOT EXISTS cv_vox (id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL, name TEXT, at INTEGER NOT NULL, n INTEGER NOT NULL, cells TEXT NOT NULL, hidden INTEGER NOT NULL DEFAULT 0)`
 ];
 // 나중에 더한 칸(이미 만들어진 표에도 붙인다. 이미 있으면 오류가 나므로 무시)
 const ALTER = [`ALTER TABLE cv_patches ADD COLUMN mode TEXT NOT NULL DEFAULT 'paint'`];
@@ -99,8 +103,11 @@ async function state(req, env, url, now) {
   const u = await user(req, env, now, false), notices = u ? await payAnswers(env, u) : [];
   const mine = u ? (await env.DB.prepare('SELECT id FROM cv_patches WHERE uid = ?').bind(u.uid).all()).results.map(r => r.id) : [];
   const myProps = u ? (await env.DB.prepare('SELECT id FROM cv_props WHERE uid = ? AND removed = 0').bind(u.uid).all()).results.map(r => r.id) : [];
+  const vsince = Math.max(0, +url.searchParams.get('vsince') || 0);
+  const vox = (await env.DB.prepare('SELECT id, name, at, cells FROM cv_vox WHERE hidden = 0 AND id > ? AND at <= ? ORDER BY id LIMIT 3000').bind(vsince, until).all()).results.map(r => ({ id: r.id, name: r.name, at: r.at, cells: JSON.parse(r.cells) }));
+  const voxHidden = (await env.DB.prepare('SELECT id FROM cv_vox WHERE hidden > 0').all()).results.map(r => r.id);
   const presence = (await env.DB.prepare('SELECT sheet, COUNT(*) AS n FROM cv_presence WHERE at > ? AND sheet IS NOT NULL GROUP BY sheet').bind(now - R.PRESENCE_MS).all()).results;
-  return json({ now, patches, hidden, props, weather, feed: recent, presence, me: meOut(u, now, notices), mine, myProps,
+  return json({ now, patches, hidden, vox, voxHidden, props, weather, feed: recent, presence, me: meOut(u, now, notices), mine, myProps,
     rules: { PPM: R.PPM, INK_MAX: R.INK_MAX, INK_PER_H: R.INK_PER_H, INK_CAP: R.INK_CAP, QUIZ_INK: R.QUIZ_INK, ANSWER_PT: R.ANSWER_PT, PROPS: R.PROPS, WEATHER: R.WEATHER, WEATHER_COST: R.WEATHER_COST, WEATHER_MS: R.WEATHER_MS } });
 }
 async function patchImg(env, id) {
@@ -144,6 +151,35 @@ async function addPatch(req, env, now) {
   if (!u.admin) { u.ink = ink - area; u.ink_at = now; await setInk(env, u, u.ink, now); }
   if (b.label) await feed(env, now, `${nm(u)} 님이 ${clean(b.label, 40)}에 그림을 입혔어요`);
   return json({ patch: { id: r.id, sheet, name: nm(u), at: now, x, y, w, h, front: b.front === false ? 0 : 1, mode }, me: meOut(u, now) }, 201);
+}
+// 블록: 놓기·지우기·칠하기 모두 한 칸에 VOX_INK. 남이 만든 것도 바꿀 수 있지만 물감이 천천히 차서 한 번에 다 부수지는 못한다
+async function addVox(req, env, now) {
+  const b = await body(req); if (!b || !Array.isArray(b.cells)) return err('잘못된 요청이에요.');
+  const u = await user(req, env, now, true); if (!u) return err('기기 값이 없어요.', 401);
+  if (!b.cells.length || b.cells.length > R.VOX_PER_REQ) return err('한 번에 바꿀 수 있는 블록 수를 넘었어요.');
+  const cells = [];
+  for (const q of b.cells) {
+    if (!Array.isArray(q) || q.length < 4) return err('블록 값이 이상해요.');
+    const [i, j, k] = q.map(v => v | 0), c = q[3];
+    if (Math.abs(i) > 8000 || Math.abs(k) > 8000 || j < -800 || j > 3200) return err('지도 밖이에요.');
+    if (c !== null && !/^#[0-9a-fA-F]{6}$/.test(c)) return err('색 값이 이상해요.');
+    cells.push([i, j, k, c === null ? null : c.toLowerCase()]);
+  }
+  const cost = cells.length * R.VOX_INK, ink = inkNow(u, now);
+  if (!u.admin && cost > ink + 1e-6) return err(`물감이 ${(cost - ink).toFixed(1)}㎡ 모자라요.`, 402, { me: meOut(u, now) });
+  const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM cv_vox WHERE uid = ? AND at > ?').bind(u.uid, now - 60000).first();
+  if (n.n >= R.VOX_PER_MIN) return err('잠시 후 다시 시도해 주세요.', 429);
+  const r = await env.DB.prepare('INSERT INTO cv_vox (uid, name, at, n, cells) VALUES (?,?,?,?,?) RETURNING id').bind(u.uid, nm(u), now, cells.length, JSON.stringify(cells)).first();
+  if (!u.admin) { u.ink = ink - cost; u.ink_at = now; await setInk(env, u, u.ink, now); }
+  return json({ vox: { id: r.id, name: nm(u), at: now }, me: meOut(u, now) }, 201);
+}
+async function delVox(req, env, now, id) {
+  const u = await user(req, env, now, false); if (!u) return err('기기 값이 없어요.', 401);
+  const p = await env.DB.prepare('SELECT n FROM cv_vox WHERE id = ? AND uid = ? AND hidden = 0').bind(id, u.uid).first();
+  if (!p) return err('내가 바꾼 것만 되돌릴 수 있어요.', 403);
+  await env.DB.prepare('UPDATE cv_vox SET hidden = 2 WHERE id = ?').bind(id).run();
+  if (!u.admin) { const ink = Math.min(R.INK_CAP, inkNow(u, now) + p.n * R.VOX_INK); u.ink = ink; u.ink_at = now; await setInk(env, u, ink, now); }
+  return json({ ok: true, me: meOut(u, now) });
 }
 // 되돌리기: 내가 올린 장을 지우고(hidden = 2) 쓴 물감을 돌려준다. 그 위에 남이 칠한 것은 그대로
 async function delPatch(req, env, now, id) {
@@ -287,6 +323,8 @@ async function route(request, env, p) {
     if (q === '/me' && M === 'POST') return await setMe(request, env, now);
     if (q === '/patches' && M === 'POST') return await addPatch(request, env, now);
     m = q.match(/^\/patches\/(\d+)$/); if (m && M === 'DELETE') return await delPatch(request, env, now, +m[1]);
+    if (q === '/voxels' && M === 'POST') return await addVox(request, env, now);
+    m = q.match(/^\/voxels\/(\d+)$/); if (m && M === 'DELETE') return await delVox(request, env, now, +m[1]);
     if (q === '/presence' && M === 'POST') return await presence(request, env, now);
     if (q === '/flag' && M === 'POST') return await flag(request, env, now);
     if (q === '/quizzes' && M === 'GET') return await quizzes(request, env, now);
