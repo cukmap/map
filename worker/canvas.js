@@ -12,6 +12,8 @@
 import { QUIZ } from './canvas-quiz.js';
 
 const R = {
+  FREE: true,            // 시험 기간: 물감 제한 없음(그림·블록 모두). 다시 켜려면 false
+
   PPM: 20,               // 도화지 1m = 20px (편집기와 같아야 함)
   INK_MAX: 30,           // 시간이 지나면 여기까지 저절로 찬다(㎡)
   INK_PER_H: 6,          // 한 시간에 차는 양(㎡) → 빈 통이 5시간에 가득
@@ -108,7 +110,7 @@ async function state(req, env, url, now) {
   const voxHidden = (await env.DB.prepare('SELECT id FROM cv_vox WHERE hidden > 0').all()).results.map(r => r.id);
   const presence = (await env.DB.prepare('SELECT sheet, COUNT(*) AS n FROM cv_presence WHERE at > ? AND sheet IS NOT NULL GROUP BY sheet').bind(now - R.PRESENCE_MS).all()).results;
   return json({ now, patches, hidden, vox, voxHidden, props, weather, feed: recent, presence, me: meOut(u, now, notices), mine, myProps,
-    rules: { PPM: R.PPM, INK_MAX: R.INK_MAX, INK_PER_H: R.INK_PER_H, INK_CAP: R.INK_CAP, QUIZ_INK: R.QUIZ_INK, ANSWER_PT: R.ANSWER_PT, PROPS: R.PROPS, WEATHER: R.WEATHER, WEATHER_COST: R.WEATHER_COST, WEATHER_MS: R.WEATHER_MS } });
+    rules: { FREE: R.FREE, PPM: R.PPM, INK_MAX: R.INK_MAX, INK_PER_H: R.INK_PER_H, INK_CAP: R.INK_CAP, QUIZ_INK: R.QUIZ_INK, ANSWER_PT: R.ANSWER_PT, PROPS: R.PROPS, WEATHER: R.WEATHER, WEATHER_COST: R.WEATHER_COST, WEATHER_MS: R.WEATHER_MS } });
 }
 async function patchImg(env, id) {
   const r = await env.DB.prepare('SELECT img, hidden FROM cv_patches WHERE id = ?').bind(id).first();
@@ -142,13 +144,13 @@ async function addPatch(req, env, now) {
   if (!(area > 0)) return err('칠한 곳이 없어요.');
   if ((+b.area || 0) > maxArea * 1.02) return err('그림 넓이가 이상해요.');
   const ink = inkNow(u, now);
-  if (!u.admin && area > ink + 1e-6) return err(`물감이 ${(area - ink).toFixed(1)}㎡ 모자라요.`, 402, { me: meOut(u, now) });
+  if (!u.admin && !R.FREE && area > ink + 1e-6) return err(`물감이 ${(area - ink).toFixed(1)}㎡ 모자라요.`, 402, { me: meOut(u, now) });
   // 프로그램 도배만 막는다: 1분에 20장
   const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM cv_patches WHERE uid = ? AND at > ?').bind(u.uid, now - 60000).first();
   if (n.n >= R.PATCH_PER_MIN) return err('잠시 후 다시 시도해 주세요.', 429);
   const mode = b.mode === 'erase' ? 'erase' : 'paint';
   const r = await env.DB.prepare('INSERT INTO cv_patches (sheet, uid, name, at, x, y, w, h, front, area, img, mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id').bind(sheet, u.uid, nm(u), now, x, y, w, h, b.front === false ? 0 : 1, area, img, mode).first();
-  if (!u.admin) { u.ink = ink - area; u.ink_at = now; await setInk(env, u, u.ink, now); }
+  if (!u.admin && !R.FREE) { u.ink = ink - area; u.ink_at = now; await setInk(env, u, u.ink, now); }
   if (b.label) await feed(env, now, `${nm(u)} 님이 ${clean(b.label, 40)}에 그림을 입혔어요`);
   return json({ patch: { id: r.id, sheet, name: nm(u), at: now, x, y, w, h, front: b.front === false ? 0 : 1, mode }, me: meOut(u, now) }, 201);
 }
@@ -162,10 +164,10 @@ async function addVox(req, env, now) {
     if (!Array.isArray(q) || q.length < 4) return err('블록 값이 이상해요.');
     const [i, j, k] = q.map(v => v | 0), c = q[3];
     if (Math.abs(i) > 8000 || Math.abs(k) > 8000 || j < -800 || j > 3200) return err('지도 밖이에요.');
-    if (c !== null && !/^#[0-9a-fA-F]{6}$/.test(c)) return err('색 값이 이상해요.');
-    cells.push([i, j, k, c === null ? null : c.toLowerCase()]);
+    if (c !== null && c !== 'air' && !/^#[0-9a-fA-F]{6}$/.test(c)) return err('색 값이 이상해요.');
+    cells.push([i, j, k, c === null || c === 'air' ? c : c.toLowerCase()]);
   }
-  const cost = cells.length * R.VOX_INK, ink = inkNow(u, now);
+  const cost = R.FREE ? 0 : cells.length * R.VOX_INK, ink = inkNow(u, now);
   if (!u.admin && cost > ink + 1e-6) return err(`물감이 ${(cost - ink).toFixed(1)}㎡ 모자라요.`, 402, { me: meOut(u, now) });
   const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM cv_vox WHERE uid = ? AND at > ?').bind(u.uid, now - 60000).first();
   if (n.n >= R.VOX_PER_MIN) return err('잠시 후 다시 시도해 주세요.', 429);
