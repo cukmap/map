@@ -2,10 +2,12 @@
 // - 지도 화면(dist/)은 정적 파일로 보낸다(이 코드를 거치지 않음).
 // - /indoor.json, /private/* : 비공개 Worker(cukmap-indoor)에서 받아 와 같은 주소로 건넨다.
 // - /api/canvas/* : canvas.cukmap.com 의 그림·소품·날씨·퀴즈 (worker/canvas.js)
+// - /api/cats/*   : cats.cukmap.com 의 오늘의 츄르 자리·한 판 기록·랭킹 (worker/cats.js)
 // - /api/reports : 오류 제보(게스트 가능, 글자만). 내용 검사는 하지 않고, 「부적절해요」 신고가 모이면 자동으로 숨긴다.
 //   표는 첫 요청 때 자동으로 만든다.
 
 import { canvasApi } from './canvas.js';
+import { catsApi } from './cats.js';
 
 const CATS = ['building', 'path', 'entrance', 'indoor', 'name', 'other'];
 const HIDE_AT = 3;   // "부적절해요" 이만큼 모이면 자동으로 숨김
@@ -139,6 +141,7 @@ export default {
     }
     if (p === '/api/contributors') { try { return await contributors(env, ctx); } catch (e) { return json({ error: '목록을 불러오지 못했어요.' }, 502); } }
     if (p.startsWith('/api/canvas/')) return canvasApi(request, env, p);
+    if (p.startsWith('/api/cats/')) return catsApi(request, env, p);
     if (p.startsWith('/api/')) {
       if (!env.DB) return json({ error: '제보 저장소가 연결되지 않았어요.' }, 503);
       try {

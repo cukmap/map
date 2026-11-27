@@ -190,7 +190,10 @@ const okC=c=>c===null||c==='air'||/^#[0-9a-f]{6}$/i.test(c);
 // WASD 이동 · 마우스 시점 · 스페이스 점프(두 번 누르면 날기, 날 때 스페이스 위/쉬프트 아래) · Ctrl 달리기
 // 왼쪽 클릭 부수기 · 오른쪽 클릭 놓기 · 휠 클릭 색 집기 · 1~9/휠 손에 든 것 바꾸기 · E 색 고르기 · Esc 메뉴
 // 발밑: 등고선 땅만이 아니라 계단·옥상·턱·캐노피 같은 실제로 그려진 윗면과 블록 위를 밟는다
-const EYE=1.62,STEP=.6,RAD=.28,REACH=8;
+const STEP=.6,REACH=8;
+// 몸: 사람(기본) 또는 고양이(body:'cat' — 눈높이 30cm, 몸이 작아 낮은 틈도 지나가고, 점프가 높고 빠름)
+const BODIES={person:{eye:1.62,rad:.28,hs:[.3,1,1.7],jump:7.7,walk:4.3,run:5.6},cat:{eye:.32,rad:.16,hs:[.1,.28],jump:9.2,walk:4,run:7.2}};
+let BD=BODIES.person,EYE=BD.eye,RAD=BD.rad;
 let SURF=null;const BKT=4;
 function surfBuild(){SURF=new Map();const objs=[typeof build!=='undefined'?build:null,typeof roofObj!=='undefined'?roofObj:null,typeof extObj!=='undefined'?extObj:null,typeof cadObj!=='undefined'?cadObj:null].filter(o=>o&&o.src);for(const o of globalThis.__SHX||[])if(o&&o.src)objs.push(o);
   const inB=(x,z)=>{for(const b of B){const P=b.poly;if(!P||P.length<3)continue;let c=false;for(let a=0,d=P.length-1;a<P.length;d=a++){const p=P[a],q=P[d];if((p[1]>z)!==(q[1]>z)&&x<(q[0]-p[0])*(z-p[1])/(q[1]-p[1])+p[0])c=!c}if(c)return true}return false};
@@ -209,7 +212,7 @@ function surfAt(x,z,yMax){const BW=globalThis.__BW;let h;if(BW){h=BW.top(x,z,yMa
 function onSurf(x,y,z){const g=surfAt(x,z,y+.02);return y<=g+.02&&y>g-.35}
 // 몸이 들어갈 수 없는 곳(건물 안, 블록)
 function blocked(x,y,z){for(const [dx,dz] of [[0,0],[RAD,0],[-RAD,0],[0,RAD],[0,-RAD]]){const px=x+dx,pz=z+dz;
-    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true;const BW=globalThis.__BW;if(BW){if(BW.solid(px,py,pz))return true}else if(WALK&&solidW(px,py,pz))return true}}return false}
+    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of BD.hs){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true;const BW=globalThis.__BW;if(BW){if(BW.solid(px,py,pz))return true}else if(WALK&&solidW(px,py,pz))return true}}return false}
 let FL=null,WALK=false;const held={};
 function slotItem(){return FL&&FL.slots[FL.slot]||{color:'#c0392b'}}
 function center(){const r=canvas.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
@@ -229,7 +232,7 @@ function setOutline(c,rgb){const K=c?c.join()+rgb.join():'';if(K===outKey)return
 const locked=()=>document.pointerLockElement===canvas||!!globalThis.__FLYTEST; // __FLYTEST: 자동 시험용
 let lastSpace=0,hold=null,holdT=0;
 function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL.t=now;requestAnimationFrame(step);
-  const L=locked()||FL.active,f=L?((held.w?1:0)-(held.s?1:0)):0,sd=L?((held.d?1:0)-(held.a?1:0)):0,sp=FL.fly?(held.control?21:10.9):(held.control?5.6:4.3);
+  const L=locked()||FL.active,f=L?((held.w?1:0)-(held.s?1:0)):0,sd=L?((held.d?1:0)-(held.a?1:0)):0,sp=FL.fly?(held.control?21:10.9):(held.control?BD.run:BD.walk);
   const fx=Math.sin(FL.yaw),fz=-Math.cos(FL.yaw),rx=Math.cos(FL.yaw),rz=Math.sin(FL.yaw);let mx=(fx*f+rx*sd),mz=(fz*f+rz*sd);const ml=Math.hypot(mx,mz);if(ml){mx=mx/ml*sp*dt;mz=mz/ml*sp*dt}
   // 옆으로: 막히면 그 축만 멈춤. 걷는 중엔 STEP 높이까지는 올라섬(계단)
   for(const [ax,az] of [[mx,0],[0,mz]]){if(!ax&&!az)continue;const nx=FL.x+ax,nz=FL.z+az;let ny=FL.y;
@@ -245,7 +248,7 @@ function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL
   if(hold&&now-holdT>220){holdT=now;hold==='break'?doBreak():doPlace()}
   if(!WALK&&now-aimT>60){aimT=now;const p=L?aim():null;if(p&&p.hit==='vox')setOutline(p.cell,[.1,.12,.14]);else if(p&&p.prev)setOutline(p.prev,[.95,.95,.95]);else setOutline(null)}}
 addEventListener('keydown',e=>{if(!FL||!(locked()||FL.active))return;const k=e.key.toLowerCase();e.preventDefault();e.stopImmediatePropagation();
-  if(k===' '&&!e.repeat){const now=performance.now();if(now-lastSpace<300&&!WALK){FL.fly=!FL.fly;FL.vy=0;post({event:'fly',flying:FL.fly})}else if(!FL.fly&&FL.ground)FL.vy=7.7;lastSpace=now}
+  if(k===' '&&!e.repeat){const now=performance.now();if(now-lastSpace<300&&!WALK){FL.fly=!FL.fly;FL.vy=0;post({event:'fly',flying:FL.fly})}else if(!FL.fly&&FL.ground)FL.vy=BD.jump;lastSpace=now}
   if(/^[1-9]$/.test(k)&&!WALK){FL.slot=+k-1;post({event:'fly',slot:FL.slot})}
   if(k==='e'&&!WALK){document.exitPointerLock();post({event:'fly',menu:'palette'})}
   held[k]=true},true);
@@ -278,9 +281,10 @@ function voxelStamp(o){o=o||{};const id=String(o.id||'s'+STAMPS.size);voxelUnsta
 function voxelUnstamp(id){const put=STAMPS.get(String(id));if(!put)return false;for(const c of put)setCell(c[0],c[1],c[2],null);STAMPS.delete(String(id));return true}
 function voxelFly(o){o=o||{};if(o.unlock&&FL){FL.active=false;for(const k in held)held[k]=false;if(locked())document.exitPointerLock();return {on:true,locked:false}}
   if(o.on===false){if(FL){FL=null;chrome(false);globalThis.__FLY=null;if(locked())document.exitPointerLock();setOutline(null);const ob=document.getElementById('orbitBtn');if(ob)ob.click()}return {on:false}}
-  if(o.on&&!FL){WALK=!!o.walk;if(!WALK){bvAll();loadDoors();let bx=+o.x,bz=+o.z;if(!(isFinite(bx)&&isFinite(bz))){const b=CUKPICK.findB(o.building||'니콜스관');bx=b?b.cx:0;bz=b?b.cz:0}nearBuildings(bx,bz,30)}const [x,z,yw]=spawn(o);chrome(true);FL={x,z,y:surfAt(x,z,H(x,z)+.1),vy:0,yaw:isFinite(+o.yaw)?+o.yaw:yw,pitch:-.15,fly:false,ground:true,slot:0,slots:[{color:'#c0392b'}],t:0};globalThis.__FLY={y:FL.y+EYE};MODE.tool=null;if(ghost){gl.deleteBuffer(ghost.buffer);ghost=null}requestAnimationFrame(step)}
+  if(o.on&&!FL){WALK=!!o.walk;BD=BODIES[o.body]||BODIES.person;EYE=BD.eye;RAD=BD.rad;if(!WALK){bvAll();loadDoors();let bx=+o.x,bz=+o.z;if(!(isFinite(bx)&&isFinite(bz))){const b=CUKPICK.findB(o.building||'니콜스관');bx=b?b.cx:0;bz=b?b.cz:0}nearBuildings(bx,bz,30)}const [x,z,yw]=spawn(o);chrome(true);FL={x,z,y:surfAt(x,z,H(x,z)+.1),vy:0,yaw:isFinite(+o.yaw)?+o.yaw:yw,pitch:-.15,fly:false,ground:true,slot:0,slots:[{color:'#c0392b'}],t:0};globalThis.__FLY={y:FL.y+EYE};MODE.tool=null;if(ghost){gl.deleteBuffer(ghost.buffer);ghost=null}requestAnimationFrame(step)}
   if(FL&&o.slots)FL.slots=o.slots.map(s=>s.stamp?{stamp:s.stamp.filter(q=>Array.isArray(q)&&q.length>=4&&okC(q[3])).slice(0,4000),name:s.name}:{color:okC(s.color)?s.color:'#c0392b'});
   if(FL&&isFinite(+o.slot))FL.slot=Math.max(0,Math.min(FL.slots.length-1,+o.slot|0));
+  if(FL&&isFinite(+o.x)&&isFinite(+o.z)&&o.teleport){FL.x=+o.x;FL.z=+o.z;FL.y=surfAt(FL.x,FL.z,H(FL.x,FL.z)+.1);FL.vy=0;if(isFinite(+o.yaw))FL.yaw=+o.yaw;FL.pitch=-.05}
   return FL?{on:true,x:FL.x,y:FL.y,z:FL.z,slot:FL.slot,flying:FL.fly,locked:locked()}:{on:false}}
 
 function voxelApply(cells){let n=0;for(const q of cells||[]){if(!Array.isArray(q)||!okC(q[3]))continue;const [i,j,k]=q.map(v=>v|0);if(setCell(i,j,k,q[3]))n++}return {count:VOX.size,applied:n}}
