@@ -99,7 +99,7 @@ function setOutline(c,rgb){const K=c?c.join()+rgb.join():'';if(K===outKey)return
 const locked=()=>document.pointerLockElement===canvas||!!globalThis.__FLYTEST; // __FLYTEST: 자동 시험용
 let lastSpace=0,hold=null,holdT=0;
 function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL.t=now;requestAnimationFrame(step);
-  const L=locked(),f=L?((held.w?1:0)-(held.s?1:0)):0,sd=L?((held.d?1:0)-(held.a?1:0)):0,sp=FL.fly?(held.control?21:10.9):(held.control?5.6:4.3);
+  const L=locked()||FL.active,f=L?((held.w?1:0)-(held.s?1:0)):0,sd=L?((held.d?1:0)-(held.a?1:0)):0,sp=FL.fly?(held.control?21:10.9):(held.control?5.6:4.3);
   const fx=Math.sin(FL.yaw),fz=-Math.cos(FL.yaw),rx=Math.cos(FL.yaw),rz=Math.sin(FL.yaw);let mx=(fx*f+rx*sd),mz=(fz*f+rz*sd);const ml=Math.hypot(mx,mz);if(ml){mx=mx/ml*sp*dt;mz=mz/ml*sp*dt}
   // 옆으로: 막히면 그 축만 멈춤. 걷는 중엔 STEP 높이까지는 올라섬(계단)
   for(const [ax,az] of [[mx,0],[0,mz]]){if(!ax&&!az)continue;const nx=FL.x+ax,nz=FL.z+az;let ny=FL.y;
@@ -112,7 +112,7 @@ function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL
   camera.mode='walk';camera.pos=[FL.x,0,FL.z];camera.yaw=FL.yaw;camera.pitch=FL.pitch;globalThis.__FLY.y=FL.y+EYE;
   if(hold&&now-holdT>220){holdT=now;hold==='break'?doBreak():doPlace()}
   if(now-aimT>60){aimT=now;const p=L?aim():null;if(p&&p.hit==='vox')setOutline(p.cell,[.1,.12,.14]);else if(p&&p.prev)setOutline(p.prev,[.95,.95,.95]);else setOutline(null)}}
-addEventListener('keydown',e=>{if(!FL||!locked())return;const k=e.key.toLowerCase();e.preventDefault();e.stopImmediatePropagation();
+addEventListener('keydown',e=>{if(!FL||!(locked()||FL.active))return;const k=e.key.toLowerCase();e.preventDefault();e.stopImmediatePropagation();
   if(k===' '&&!e.repeat){const now=performance.now();if(now-lastSpace<300){FL.fly=!FL.fly;FL.vy=0;post({event:'fly',flying:FL.fly})}else if(!FL.fly&&FL.ground)FL.vy=7.7;lastSpace=now}
   if(/^[1-9]$/.test(k)){FL.slot=+k-1;post({event:'fly',slot:FL.slot})}
   if(k==='e'){document.exitPointerLock();post({event:'fly',menu:'palette'})}
@@ -120,11 +120,15 @@ addEventListener('keydown',e=>{if(!FL||!locked())return;const k=e.key.toLowerCas
 addEventListener('keyup',e=>{if(!FL)return;held[e.key.toLowerCase()]=false;if(locked()){e.stopImmediatePropagation()}},true);
 addEventListener('blur',()=>{for(const k in held)held[k]=false});
 for(const t of ['pointerdown','pointerup','pointermove','click','dblclick'])canvas.addEventListener(t,e=>{if(!FL)return;e.stopImmediatePropagation();e.preventDefault();
-  if(t==='pointerdown'){if(!locked()){canvas.requestPointerLock();return}if(e.button===0){doBreak();hold='break';holdT=performance.now()}else if(e.button===2){doPlace();hold='place';holdT=performance.now()}else if(e.button===1)doPick()}
+  if(t==='pointerdown'){try{window.focus()}catch(_){}if(!locked()&&!FL.active){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(_){}return}if(e.button===0){doBreak();hold='break';holdT=performance.now()}else if(e.button===2){doPlace();hold='place';holdT=performance.now()}else if(e.button===1)doPick()}
   if(t==='pointerup')hold=null},true);
+// 화면을 누르면 '들어가 있음'. 마우스 잠금이 막혀도 키보드로 움직이고, 마우스는 끌어서 둘러볼 수 있게
+canvas.addEventListener('pointerdown',()=>{if(FL&&!FL.active){FL.active=true;post({event:'fly',locked:true})}},true);
+let drag=null;canvas.addEventListener('pointermove',e=>{if(!FL||locked())return;if(e.buttons&1){if(drag){FL.yaw+=(e.clientX-drag[0])*.004;FL.pitch=Math.max(-1.55,Math.min(1.55,FL.pitch-(e.clientY-drag[1])*.004))}drag=[e.clientX,e.clientY]}else drag=null},true);
 canvas.addEventListener('mousemove',e=>{if(!FL||!locked())return;FL.yaw+=e.movementX*.0024;FL.pitch=Math.max(-1.55,Math.min(1.55,FL.pitch-e.movementY*.0024))},true);
 canvas.addEventListener('wheel',e=>{if(!FL||!locked())return;e.preventDefault();e.stopImmediatePropagation();FL.slot=(FL.slot+(e.deltaY>0?1:-1)+FL.slots.length)%FL.slots.length;post({event:'fly',slot:FL.slot})},{capture:true,passive:false});
-document.addEventListener('pointerlockchange',()=>{if(!FL)return;for(const k in held)held[k]=false;hold=null;if(!locked())setOutline(null);post({event:'fly',locked:locked()})});
+document.addEventListener('pointerlockchange',()=>{if(!FL)return;for(const k in held)held[k]=false;hold=null;if(!locked()){FL.active=false;setOutline(null)}post({event:'fly',locked:locked()||FL.active})});
+addEventListener('keydown',e=>{if(FL&&e.key==='Escape'&&FL.active&&!locked()){FL.active=false;for(const k in held)held[k]=false;setOutline(null);post({event:'fly',locked:false})}},true);
 function spawn(o){let x=+o.x,z=+o.z,b=null;if(!(isFinite(x)&&isFinite(z))){b=CUKPICK.findB(o.building||'니콜스관');x=b?b.cx:0;z=b?b.cz:0}
   // 탁 트인 곳 찾기: 반지름 3m 안에 벽·블록이 없고, 머리 위가 비어 있고, 평평한 곳
   const open=(px,pz)=>{const g=surfAt(px,pz,H(px,pz)+.2);if(surfAt(px,pz,g+30)>g+.6)return false;for(let a=0;a<8;a++){const qx=px+Math.cos(a*.785)*3,qz=pz+Math.sin(a*.785)*3;if(blocked(qx,g,qz)||Math.abs(surfAt(qx,qz,g+.6)-g)>.6)return false}return !blocked(px,g,pz)};
