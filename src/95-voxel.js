@@ -269,7 +269,8 @@ addEventListener('keydown',e=>{if(FL&&e.key==='Escape'&&FL.active&&!locked()){FL
 function spawn(o){let x=+o.x,z=+o.z,b=null;if(!(isFinite(x)&&isFinite(z))){b=CUKPICK.findB(o.building||'니콜스관');x=b?b.cx:0;z=b?b.cz:0}
   // 탁 트인 곳 찾기: 반지름 3m 안에 벽·블록이 없고, 머리 위가 비어 있고, 평평한 곳
   const open=(px,pz)=>{const g=surfAt(px,pz,H(px,pz)+.2);if(surfAt(px,pz,g+30)>g+.6)return false;for(let a=0;a<8;a++){const qx=px+Math.cos(a*.785)*3,qz=pz+Math.sin(a*.785)*3;if(blocked(qx,g,qz)||Math.abs(surfAt(qx,qz,g+.6)-g)>.6)return false}return !blocked(px,g,pz)};
-  let fx=x,fz=z;search:for(let r=16;r<160;r+=2)for(let a=0;a<16;a++){const px=x+Math.cos(a*.3927)*r,pz=z+Math.sin(a*.3927)*r;if(open(px,pz)){fx=px;fz=pz;break search}}
+  // 자리를 직접 준 경우(x, z)엔 그 자리부터, 건물로 준 경우엔 건물에서 16m 떨어진 곳부터 찾는다
+  let fx=x,fz=z;search:for(let r=b?16:0;r<160;r+=b?2:1)for(let a=0;a<16;a++){const px=x+Math.cos(a*.3927)*r,pz=z+Math.sin(a*.3927)*r;if(open(px,pz)){fx=px;fz=pz;break search}}
   const yaw=b?Math.atan2(b.cx-fx,-(b.cz-fz)):0;return [fx,fz,yaw]}
 // 1인칭일 땐 지도 화면의 버튼·작은 지도·속도 막대를 숨긴다(건물 이름표만 남김)
 let HID=[];const cst=document.createElement('style');cst.textContent='body.cukfly #wspd,body.cukfly #mode,body.cukfly #intro{display:none!important}';document.head.appendChild(cst);

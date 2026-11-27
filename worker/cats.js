@@ -15,7 +15,8 @@ const R = {
   PATH_DT: 0.5,        // 길은 0.5초마다 한 점 [x, y, z]
   MAX_SPEED: 14,       // 두 점 사이 이보다 빠르면(m/s) 기록 거절(달리기 7, 점프·내리막 여유)
   RUNS_PER_DAY: 40,    // 한 사람이 하루에 올릴 수 있는 판 수
-  TOP: 20
+  TOP: 20,
+  START: [298, 89]    // 시작 자리(정문 앞). 이 근처 40m 안엔 츄르를 두지 않음
 };
 
 // 츄르를 둘 수 있는 곳(실제 지도 좌표 x, z). 실내·건물 출입구는 빼고 길·광장·계단·언덕 같은 바깥 장소만
@@ -67,7 +68,7 @@ function daySpots(day) {
   let s = 0; for (const c of 'cats|' + day) s = (Math.imul(s, 31) + c.charCodeAt(0)) | 0;
   const rnd = () => { s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const a = [...SPOTS]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-  const out = []; for (const p of a) { if (out.length >= R.PER_DAY) break; if (out.every(q => Math.hypot(q.at[0] - p.at[0], q.at[1] - p.at[1]) >= R.MIN_GAP)) out.push(p); }
+  const out = []; for (const p of a) { if (out.length >= R.PER_DAY) break; if (Math.hypot(p.at[0] - R.START[0], p.at[1] - R.START[1]) < 40) continue; if (out.every(q => Math.hypot(q.at[0] - p.at[0], q.at[1] - p.at[1]) >= R.MIN_GAP)) out.push(p); }
   return out;
 }
 
