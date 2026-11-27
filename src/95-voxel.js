@@ -187,7 +187,7 @@ let SURF=null;const BKT=4;
 function surfBuild(){SURF=new Map();const objs=[typeof build!=='undefined'?build:null,typeof roofObj!=='undefined'?roofObj:null,typeof extObj!=='undefined'?extObj:null,typeof cadObj!=='undefined'?cadObj:null].filter(o=>o&&o.src);for(const o of globalThis.__SHX||[])if(o&&o.src)objs.push(o);
   const inB=(x,z)=>{for(const b of B){const P=b.poly;if(!P||P.length<3)continue;let c=false;for(let a=0,d=P.length-1;a<P.length;d=a++){const p=P[a],q=P[d];if((p[1]>z)!==(q[1]>z)&&x<(q[0]-p[0])*(z-p[1])/(q[1]-p[1])+p[0])c=!c}if(c)return true}return false};
   for(const o of objs){const a=o.src,bl=(typeof build!=='undefined'&&o===build)||(typeof roofObj!=='undefined'&&o===roofObj);for(let t=0;t+32<a.length;t+=33){const x0=a[t],y0=a[t+1],z0=a[t+2],x1=a[t+11],y1=a[t+12],z1=a[t+13],x2=a[t+22],y2=a[t+23],z2=a[t+24];
-    const ux=x1-x0,uy=y1-y0,uz=z1-z0,vx=x2-x0,vy=y2-y0,vz=z2-z0,nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,l=Math.hypot(nx,ny,nz);if(!l||Math.abs(ny)/l<.55)continue;if(bl&&inB((x0+x1+x2)/3,(z0+z1+z2)/3))continue;
+    const ux=x1-x0,uy=y1-y0,uz=z1-z0,vx=x2-x0,vy=y2-y0,vz=z2-z0,nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,l=Math.hypot(nx,ny,nz);if(!l||Math.abs(ny)/l<.55)continue;if(bl&&!WALK&&inB((x0+x1+x2)/3,(z0+z1+z2)/3))continue;
     const T=[x0,y0,z0,x1,y1,z1,x2,y2,z2],bx0=Math.floor(Math.min(x0,x1,x2)/BKT),bx1=Math.floor(Math.max(x0,x1,x2)/BKT),bz0=Math.floor(Math.min(z0,z1,z2)/BKT),bz1=Math.floor(Math.max(z0,z1,z2)/BKT);
     if((bx1-bx0+1)*(bz1-bz0+1)>400)continue;for(let bx=bx0;bx<=bx1;bx++)for(let bz=bz0;bz<=bz1;bz++){const K=bx+','+bz;if(!SURF.has(K))SURF.set(K,[]);SURF.get(K).push(T)}}}}
 // (x,z)에서 높이 yMax 이하에 있는 가장 높은 디딤면
@@ -201,8 +201,8 @@ function surfAt(x,z,yMax){if(!SURF){surfBuild();setTimeout(()=>freeSrc(true),0)}
 function onSurf(x,y,z){const g=surfAt(x,z,y+.02);return y<=g+.02&&y>g-.35}
 // 몸이 들어갈 수 없는 곳(건물 안, 블록)
 function blocked(x,y,z){for(const [dx,dz] of [[0,0],[RAD,0],[-RAD,0],[0,RAD],[0,-RAD]]){const px=x+dx,pz=z+dz;
-    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true}}return false}
-let FL=null;const held={};
+    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true;if(WALK&&solidB(px,py,pz))return true}}return false}
+let FL=null,WALK=false;const held={};
 function slotItem(){return FL&&FL.slots[FL.slot]||{color:'#c0392b'}}
 function center(){const r=canvas.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
 function aim(){const [cx,cy]=center();return pickAt(cx,cy,{max:REACH,surf:true})}
@@ -231,25 +231,26 @@ function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL
   if(FL.fly){const v=L?((held[' ']?1:0)-(held.shift?1:0)):0;const ny=FL.y+v*8*dt;if(!blocked(FL.x,Math.max(ny,g),FL.z))FL.y=Math.max(ny,g);if(FL.y<=g+.001&&held.shift)FL.fly=false;FL.vy=0;FL.ground=FL.y<=g+.001}
   else{if(FL.y>g+.001||FL.vy>0){FL.vy-=25*dt;const ny=FL.y+FL.vy*dt;if(FL.vy>0&&blocked(FL.x,ny,FL.z))FL.vy=0;else FL.y=ny;if(FL.y<=g){FL.y=g;FL.vy=0}}else{FL.y=g;FL.vy=0}FL.ground=FL.y<=g+.001}
   if(FL.y<-200){FL.y=H(FL.x,FL.z);FL.vy=0}
-  if(!FL.nb||now-FL.nb>700){FL.nb=now;nearBuildings(FL.x,FL.z,40)}
+  if(!WALK&&(!FL.nb||now-FL.nb>700)){FL.nb=now;nearBuildings(FL.x,FL.z,40)}
+  if(WALK&&(!FL.pt||now-FL.pt>150)){FL.pt=now;post({event:'fly',pos:[+FL.x.toFixed(2),+FL.y.toFixed(2),+FL.z.toFixed(2)],yaw:+FL.yaw.toFixed(3)})}
   camera.mode='walk';camera.pos=[FL.x,0,FL.z];camera.yaw=FL.yaw;camera.pitch=FL.pitch;globalThis.__FLY.y=FL.y+EYE;
   if(hold&&now-holdT>220){holdT=now;hold==='break'?doBreak():doPlace()}
-  if(now-aimT>60){aimT=now;const p=L?aim():null;if(p&&p.hit==='vox')setOutline(p.cell,[.1,.12,.14]);else if(p&&p.prev)setOutline(p.prev,[.95,.95,.95]);else setOutline(null)}}
+  if(!WALK&&now-aimT>60){aimT=now;const p=L?aim():null;if(p&&p.hit==='vox')setOutline(p.cell,[.1,.12,.14]);else if(p&&p.prev)setOutline(p.prev,[.95,.95,.95]);else setOutline(null)}}
 addEventListener('keydown',e=>{if(!FL||!(locked()||FL.active))return;const k=e.key.toLowerCase();e.preventDefault();e.stopImmediatePropagation();
-  if(k===' '&&!e.repeat){const now=performance.now();if(now-lastSpace<300){FL.fly=!FL.fly;FL.vy=0;post({event:'fly',flying:FL.fly})}else if(!FL.fly&&FL.ground)FL.vy=7.7;lastSpace=now}
-  if(/^[1-9]$/.test(k)){FL.slot=+k-1;post({event:'fly',slot:FL.slot})}
-  if(k==='e'){document.exitPointerLock();post({event:'fly',menu:'palette'})}
+  if(k===' '&&!e.repeat){const now=performance.now();if(now-lastSpace<300&&!WALK){FL.fly=!FL.fly;FL.vy=0;post({event:'fly',flying:FL.fly})}else if(!FL.fly&&FL.ground)FL.vy=7.7;lastSpace=now}
+  if(/^[1-9]$/.test(k)&&!WALK){FL.slot=+k-1;post({event:'fly',slot:FL.slot})}
+  if(k==='e'&&!WALK){document.exitPointerLock();post({event:'fly',menu:'palette'})}
   held[k]=true},true);
 addEventListener('keyup',e=>{if(!FL)return;held[e.key.toLowerCase()]=false;if(locked()){e.stopImmediatePropagation()}},true);
 addEventListener('blur',()=>{for(const k in held)held[k]=false});
 for(const t of ['pointerdown','pointerup','pointermove','click','dblclick'])canvas.addEventListener(t,e=>{if(!FL)return;e.stopImmediatePropagation();e.preventDefault();
-  if(t==='pointerdown'){try{window.focus()}catch(_){}if(!locked()&&!FL.active){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(_){}return}if(e.button===0){doBreak();hold='break';holdT=performance.now()}else if(e.button===2){doPlace();hold='place';holdT=performance.now()}else if(e.button===1)doPick()}
+  if(t==='pointerdown'){try{window.focus()}catch(_){}if(!locked()&&!FL.active){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(_){}return}if(WALK)return;if(e.button===0){doBreak();hold='break';holdT=performance.now()}else if(e.button===2){doPlace();hold='place';holdT=performance.now()}else if(e.button===1)doPick()}
   if(t==='pointerup')hold=null},true);
 // 화면을 누르면 '들어가 있음'. 마우스 잠금이 막혀도 키보드로 움직이고, 마우스는 끌어서 둘러볼 수 있게
 canvas.addEventListener('pointerdown',()=>{if(FL&&!FL.active){FL.active=true;post({event:'fly',locked:true})}},true);
 let drag=null;canvas.addEventListener('pointermove',e=>{if(!FL||locked())return;if(e.buttons&1){if(drag){FL.yaw+=(e.clientX-drag[0])*.004;FL.pitch=Math.max(-1.55,Math.min(1.55,FL.pitch-(e.clientY-drag[1])*.004))}drag=[e.clientX,e.clientY]}else drag=null},true);
 canvas.addEventListener('mousemove',e=>{if(!FL||!locked())return;FL.yaw+=e.movementX*.0024;FL.pitch=Math.max(-1.55,Math.min(1.55,FL.pitch-e.movementY*.0024))},true);
-canvas.addEventListener('wheel',e=>{if(!FL||!locked())return;e.preventDefault();e.stopImmediatePropagation();FL.slot=(FL.slot+(e.deltaY>0?1:-1)+FL.slots.length)%FL.slots.length;post({event:'fly',slot:FL.slot})},{capture:true,passive:false});
+canvas.addEventListener('wheel',e=>{if(!FL||!locked()||WALK)return;e.preventDefault();e.stopImmediatePropagation();FL.slot=(FL.slot+(e.deltaY>0?1:-1)+FL.slots.length)%FL.slots.length;post({event:'fly',slot:FL.slot})},{capture:true,passive:false});
 document.addEventListener('pointerlockchange',()=>{if(!FL)return;for(const k in held)held[k]=false;hold=null;if(!locked()){FL.active=false;setOutline(null)}post({event:'fly',locked:locked()||FL.active})});
 addEventListener('keydown',e=>{if(FL&&e.key==='Escape'&&FL.active&&!locked()){FL.active=false;for(const k in held)held[k]=false;setOutline(null);post({event:'fly',locked:false})}},true);
 function spawn(o){let x=+o.x,z=+o.z,b=null;if(!(isFinite(x)&&isFinite(z))){b=CUKPICK.findB(o.building||'니콜스관');x=b?b.cx:0;z=b?b.cz:0}
@@ -260,9 +261,16 @@ function spawn(o){let x=+o.x,z=+o.z,b=null;if(!(isFinite(x)&&isFinite(z))){b=CUK
 // 1인칭일 땐 지도 화면의 버튼·작은 지도·속도 막대를 숨긴다(건물 이름표만 남김)
 let HID=[];const cst=document.createElement('style');cst.textContent='body.cukfly #wspd,body.cukfly #mode,body.cukfly #intro{display:none!important}';document.head.appendChild(cst);
 function chrome(hide){document.body.classList.toggle('cukfly',hide);if(hide){HID=[];for(const el of document.body.querySelectorAll('*')){if(el===canvas||el.contains(canvas)||el.closest('#pins,#kpins,#cukcredit')||HID.some(h=>h[0].contains(el)))continue;const cs=getComputedStyle(el);if((cs.position==='absolute'||cs.position==='fixed')&&cs.display!=='none'){HID.push([el,el.style.display]);el.style.display='none'}}}else{for(const [el,d] of HID)el.style.display=d;HID=[]}}
-function voxelFly(o){o=o||{};
+const STAMPS=new Map();
+function voxelStamp(o){o=o||{};const id=String(o.id||'s'+STAMPS.size);voxelUnstamp(id);const x=+o.x,z=+o.z;if(!isFinite(x)||!isFinite(z))throw new Error('위치(x, z)를 알려 주세요.');
+  const y=isFinite(+o.y)?+o.y:surfAt(x,z,H(x,z)+(+o.above||3)),g=G(x,z),i0=Math.floor(g[0]/S),j0=Math.floor((y+.001)/S),k0=Math.floor(g[1]/S),put=[];
+  // 방향(0~3): 90도씩 돌림
+  const r=(o.rot|0)&3;for(const q of o.cells||[]){if(!Array.isArray(q)||!okC(q[3])||q[3]==='air'||!q[3])continue;let a=q[0]|0,c=q[2]|0;for(let t=0;t<r;t++){const tmp=a;a=-c;c=tmp}const cell=[i0+a,j0+(q[1]|0),k0+c];if(VOX.has(key(...cell)))continue;setCell(cell[0],cell[1],cell[2],q[3]);put.push(cell)}
+  STAMPS.set(id,put);return {id,count:put.length,y}}
+function voxelUnstamp(id){const put=STAMPS.get(String(id));if(!put)return false;for(const c of put)setCell(c[0],c[1],c[2],null);STAMPS.delete(String(id));return true}
+function voxelFly(o){o=o||{};if(o.unlock&&FL){FL.active=false;for(const k in held)held[k]=false;if(locked())document.exitPointerLock();return {on:true,locked:false}}
   if(o.on===false){if(FL){FL=null;chrome(false);globalThis.__FLY=null;if(locked())document.exitPointerLock();setOutline(null);const ob=document.getElementById('orbitBtn');if(ob)ob.click()}return {on:false}}
-  if(o.on&&!FL){bvAll();loadDoors();{let bx=+o.x,bz=+o.z;if(!(isFinite(bx)&&isFinite(bz))){const b=CUKPICK.findB(o.building||'니콜스관');bx=b?b.cx:0;bz=b?b.cz:0}nearBuildings(bx,bz,30)}const [x,z,yw]=spawn(o);chrome(true);FL={x,z,y:surfAt(x,z,H(x,z)+.1),vy:0,yaw:isFinite(+o.yaw)?+o.yaw:yw,pitch:-.15,fly:false,ground:true,slot:0,slots:[{color:'#c0392b'}],t:0};globalThis.__FLY={y:FL.y+EYE};MODE.tool=null;if(ghost){gl.deleteBuffer(ghost.buffer);ghost=null}requestAnimationFrame(step)}
+  if(o.on&&!FL){WALK=!!o.walk;if(!WALK){bvAll();loadDoors();let bx=+o.x,bz=+o.z;if(!(isFinite(bx)&&isFinite(bz))){const b=CUKPICK.findB(o.building||'니콜스관');bx=b?b.cx:0;bz=b?b.cz:0}nearBuildings(bx,bz,30)}const [x,z,yw]=spawn(o);chrome(true);FL={x,z,y:surfAt(x,z,H(x,z)+.1),vy:0,yaw:isFinite(+o.yaw)?+o.yaw:yw,pitch:-.15,fly:false,ground:true,slot:0,slots:[{color:'#c0392b'}],t:0};globalThis.__FLY={y:FL.y+EYE};MODE.tool=null;if(ghost){gl.deleteBuffer(ghost.buffer);ghost=null}requestAnimationFrame(step)}
   if(FL&&o.slots)FL.slots=o.slots.map(s=>s.stamp?{stamp:s.stamp.filter(q=>Array.isArray(q)&&q.length>=4&&okC(q[3])).slice(0,4000),name:s.name}:{color:okC(s.color)?s.color:'#c0392b'});
   if(FL&&isFinite(+o.slot))FL.slot=Math.max(0,Math.min(FL.slots.length-1,+o.slot|0));
   return FL?{on:true,x:FL.x,y:FL.y,z:FL.z,slot:FL.slot,flying:FL.fly,locked:locked()}:{on:false}}
@@ -270,6 +278,6 @@ function voxelFly(o){o=o||{};
 function voxelApply(cells){let n=0;for(const q of cells||[]){if(!Array.isArray(q)||!okC(q[3]))continue;const [i,j,k]=q.map(v=>v|0);if(setCell(i,j,k,q[3]))n++}return {count:VOX.size,applied:n}}
 function voxelReset(cells){for(const C of CHUNK.keys())DIRTY.add(C);VOX.clear();CHUNK.clear();return voxelApply(cells)}
 function voxelInfo(){return {count:VOX.size,size:S,max:MAX}}
-Object.assign(globalThis.__KIT||{},{voxelMode,voxelApply,voxelReset,voxelInfo,voxelFly});
+Object.assign(globalThis.__KIT||{},{voxelMode,voxelApply,voxelReset,voxelInfo,voxelFly,voxelStamp,voxelUnstamp});
 globalThis.__VOXDBG={surfAt,blocked,get FL(){return FL},aim,doPlace,doBreak,eff,bcell,VSKIP,MESH,BQ:()=>BQ.length-BQh,findB:n=>CUKPICK.findB(n),TH,srcMB:()=>{const o={};for(const [n,v] of [['ter',typeof ter!=='undefined'?ter:null],['build',typeof build!=='undefined'?build:null],['forest',typeof forest!=='undefined'?forest:null],['roofObj',typeof roofObj!=='undefined'?roofObj:null],['extObj',typeof extObj!=='undefined'?extObj:null],['cadObj',typeof cadObj!=='undefined'?cadObj:null],['contour',typeof contour!=='undefined'?contour:null]])o[n]=v&&v.src?Math.round(v.src.length*8/1e5)/10:0;return o},stats:()=>{bvAll();const o={};for(const b of B)for(const e of b._bents||[])o[e.t]=(o[e.t]||0)+1;return o}};
 })()}

@@ -72,6 +72,8 @@
       voxelReset: function (cells) { return call('voxelReset', cells); },
       voxelInfo: function () { return call('voxelInfo'); },
       voxelFly: function (o) { return call('voxelFly', o); },
+      voxelStamp: function (o) { return call('voxelStamp', o); },
+      voxelUnstamp: function (id) { return call('voxelUnstamp', id); },
       showSheets: function (on, o) { return call('showSheets', on, o); },
       sheetOpacity: function (v) { return call('sheetOpacity', v); },
       /** 건물 목록: [{id, code, name, floors, indoor:[층...]}] */
