@@ -232,7 +232,7 @@ function setOutline(c,rgb){const K=c?c.join()+rgb.join():'';if(K===outKey)return
 const locked=()=>document.pointerLockElement===canvas||!!globalThis.__FLYTEST; // __FLYTEST: 자동 시험용
 let lastSpace=0,hold=null,holdT=0;
 function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL.t=now;requestAnimationFrame(step);
-  const L=locked()||FL.active,f=L?((held.w?1:0)-(held.s?1:0)):0,sd=L?((held.d?1:0)-(held.a?1:0)):0,sp=FL.fly?(held.control?21:10.9):(held.control?BD.run:BD.walk);
+  const L=locked()||FL.active,f=L?((held.w?1:0)-(held.s?1:0)):0,sd=L?((held.d?1:0)-(held.a?1:0)):0,run=FL.sprint||(WALK?held.shift:held.control),sp=FL.fly?(run?21:10.9):(run?BD.run:BD.walk);
   const fx=Math.sin(FL.yaw),fz=-Math.cos(FL.yaw),rx=Math.cos(FL.yaw),rz=Math.sin(FL.yaw);let mx=(fx*f+rx*sd),mz=(fz*f+rz*sd);const ml=Math.hypot(mx,mz);if(ml){mx=mx/ml*sp*dt;mz=mz/ml*sp*dt}
   // 옆으로: 막히면 그 축만 멈춤. 걷는 중엔 STEP 높이까지는 올라섬(계단)
   for(const [ax,az] of [[mx,0],[0,mz]]){if(!ax&&!az)continue;const nx=FL.x+ax,nz=FL.z+az;let ny=FL.y;
@@ -249,11 +249,13 @@ function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL
   if(!WALK&&now-aimT>60){aimT=now;const p=L?aim():null;if(p&&p.hit==='vox')setOutline(p.cell,[.1,.12,.14]);else if(p&&p.prev)setOutline(p.prev,[.95,.95,.95]);else setOutline(null)}}
 addEventListener('keydown',e=>{if(!FL||!(locked()||FL.active))return;const k=e.key.toLowerCase();e.preventDefault();e.stopImmediatePropagation();
   if(k===' '&&!e.repeat){const now=performance.now();if(now-lastSpace<300&&!WALK){FL.fly=!FL.fly;FL.vy=0;post({event:'fly',flying:FL.fly})}else if(!FL.fly&&FL.ground)FL.vy=BD.jump;lastSpace=now}
+  // 달리기: W를 빠르게 두 번(마인크래프트처럼). 걷기 모드는 Shift도. Ctrl+W는 브라우저가 창을 닫아 버려서 쓰지 않게 한다
+  if(k==='w'&&!e.repeat){const now=e.timeStamp;if(now-(FL.lastW||-1e9)<350)FL.sprint=true;FL.lastW=now}
   if(/^[1-9]$/.test(k)&&!WALK){FL.slot=+k-1;post({event:'fly',slot:FL.slot})}
   if(k==='e'&&!WALK){document.exitPointerLock();post({event:'fly',menu:'palette'})}
   held[k]=true},true);
-addEventListener('keyup',e=>{if(!FL)return;held[e.key.toLowerCase()]=false;if(locked()){e.stopImmediatePropagation()}},true);
-addEventListener('blur',()=>{for(const k in held)held[k]=false});
+addEventListener('keyup',e=>{if(!FL)return;const ku=e.key.toLowerCase();held[ku]=false;if(ku==='w')FL.sprint=false;if(locked()){e.stopImmediatePropagation()}},true);
+addEventListener('blur',()=>{for(const k in held)held[k]=false;if(FL)FL.sprint=false});
 for(const t of ['pointerdown','pointerup','pointermove','click','dblclick'])canvas.addEventListener(t,e=>{if(!FL)return;e.stopImmediatePropagation();e.preventDefault();
   if(t==='pointerdown'){try{window.focus()}catch(_){}if(!locked()&&!FL.active){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(_){}return}if(WALK)return;if(e.button===0){doBreak();hold='break';holdT=performance.now()}else if(e.button===2){doPlace();hold='place';holdT=performance.now()}else if(e.button===1)doPick()}
   if(t==='pointerup')hold=null},true);
