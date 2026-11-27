@@ -10,12 +10,18 @@ const VOX=new Map(),CHUNK=new Map(),DIRTY=new Set(),MESH=new Map();
 const key=(i,j,k)=>i+','+j+','+k,ck=(i,j,k)=>Math.floor(i/CH)+','+Math.floor(j/CH)+','+Math.floor(k/CH);
 const hex=c=>{const n=parseInt(c.slice(1),16);return [(n>>16&255)/255,(n>>8&255)/255,(n&255)/255]};
 const post=m=>{try{parent.postMessage(Object.assign({cukmap:1},m),'*')}catch(e){}};
+// 격자 방향(2026-11-27): 학교 건물 벽이 가장 많이 향한 방향에 바둑판을 맞춘다(마인크래프트처럼 벽이 대각선 계단이 되지 않게)
+const angOf=P=>{let sx=0,sy=0;for(let a=0;a<P.length;a++){const p=P[a],q=P[(a+1)%P.length],dx=q[0]-p[0],dz=q[1]-p[1],L=Math.hypot(dx,dz),t=Math.atan2(dz,dx)*4;sx+=Math.cos(t)*L;sy+=Math.sin(t)*L}return [sx,sy]};
+const TH=(()=>{let sx=0,sy=0;for(const b of B)if(b.poly&&b.poly.length>2){const [a,c]=angOf(b.poly);sx+=a;sy+=c}return Math.atan2(sy,sx)/4})(),CO=Math.cos(TH),SI=Math.sin(TH);
+const G=(x,z)=>[x*CO+z*SI,-x*SI+z*CO],W=(gx,gz)=>[gx*CO-gz*SI,gx*SI+gz*CO];
+// 격자 좌표의 점 하나를 지도 좌표로 바꿔 메시에 넣기
+function pv(m,gx,y,gz,nx,ny,nz,c){m.push(gx*CO-gz*SI,y,gx*SI+gz*CO,nx*CO-nz*SI,ny,nx*SI+nz*CO,c[0],c[1],c[2],0,0)}
 function setCell(i,j,k,c){const K=key(i,j,k),C=ck(i,j,k);if(c){if(!VOX.has(K)&&VOX.size>=MAX)return false;VOX.set(K,c==='air'?{i,j,k,c,air:true}:{i,j,k,c,rgb:hex(c)});if(!CHUNK.has(C))CHUNK.set(C,new Set());CHUNK.get(C).add(K)}else{VOX.delete(K);const s=CHUNK.get(C);if(s)s.delete(K)}
   DIRTY.add(C);// 이웃 덩어리의 맞닿은 면도 다시
   for(const [a,b,d] of [[i-1,j,k],[i+1,j,k],[i,j-1,k],[i,j+1,k],[i,j,k-1],[i,j,k+1]]){const C2=ck(a,b,d);if(C2!==C)DIRTY.add(C2)}return true}
 const F=[[1,0,0,[[1,0,0],[1,1,0],[1,1,1],[1,0,1]]],[-1,0,0,[[0,0,1],[0,1,1],[0,1,0],[0,0,0]]],[0,1,0,[[0,1,0],[0,1,1],[1,1,1],[1,1,0]]],[0,-1,0,[[0,0,0],[1,0,0],[1,0,1],[0,0,1]]],[0,0,1,[[1,0,1],[1,1,1],[0,1,1],[0,0,1]]],[0,0,-1,[[0,0,0],[0,1,0],[1,1,0],[1,0,0]]]];
 function cube(m,i,j,k,rgb,all,grow){const g=grow||0;for(const [nx,ny,nz,q] of F){if(!all&&VOX.has(key(i+nx,j+ny,k+nz)))continue;const v=q.map(([a,b,d])=>[(i+a)*S+(a?g:-g),(j+b)*S+(b?g:-g),(k+d)*S+(d?g:-g)]);
-  for(const t of [0,1,2,0,2,3])m.push(v[t][0],v[t][1],v[t][2],nx,ny,nz,rgb[0],rgb[1],rgb[2],0,0)}}
+  for(const t of [0,1,2,0,2,3])pv(m,v[t][0],v[t][1],v[t][2],nx,ny,nz,rgb)}}
 // ===== 건물도 블록으로 (2026-11-27) =====
 // 1인칭에서 가까운 건물부터 25cm 블록으로 바꿔 그린다: 외벽 한 겹 + 지붕 + 바닥, 출입구는 뚫어 둔다.
 // 실내 도면이 있는 건물은 층마다 바닥판과 벽을 도면대로 세우고, 없는 건물은 속이 빈 공간이다.
@@ -35,22 +41,47 @@ function rasterSegs(w){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(let t=0;t+3<w.lengt
 function bvAll(){if(BIDX)return;BIDX=new Map();
   const put=e=>{for(let a=Math.floor(e.i0/32);a<=Math.floor((e.i0+e.ni)/32);a++)for(let c=Math.floor(e.k0/32);c<=Math.floor((e.k0+e.nk)/32);c++){const K=a+','+c;if(!BIDX.has(K))BIDX.set(K,[]);BIDX.get(K).push(e)}};
   for(const b of B){if(!b.poly||b.poly.length<3)continue;const ents=[],parts=[];b._bents=ents;b._door=new Set();const sp=b.spec;
+    // 건물마다 바둑판 방향에 맞게 중심을 축으로 살짝 돌린다(실내 도면·출입구도 같이)
+    const [sx2,sy2]=angOf(b.poly);let d=Math.atan2(sy2,sx2)/4-TH;d-=Math.PI/2*Math.round(d/(Math.PI/2));const cd=Math.cos(-d),sd=Math.sin(-d),cx=b.cx,cz=b.cz;
+    const sn=p=>[cx+(p[0]-cx)*cd-(p[1]-cz)*sd,cz+(p[0]-cx)*sd+(p[1]-cz)*cd];b._sn=sn;const gp=p=>G(...sn(p));
     try{if(sp&&sp.parts&&sp.parts.length){const lvl1=sp.datum!=null?sp.datum:Math.min(...b.poly.map(p=>H(p[0],p[1])))+(sp.lift||0);
       for(const pt of sp.parts){const base=lvl1+(pt.base||0),top=base+pt.height,fh=Math.max(2.8,(pt.height-(pt.parapet>0?pt.parapet:0))/Math.max(1,pt.floors||1)),bot=pt.bottom>0?base+pt.bottom:(pt.pilotis?base+pt.pilotis*fh:base);
         parts.push({rings:[pt.poly,...(pt.holes||[])],bot,top,wall:typeof pt.wall==='string'?pt.wall:BCOL.wall,roof:typeof pt.roofColor==='string'?pt.roofColor:BCOL.roof})}}
      else if(isFinite(b.roof)){parts.push({rings:[b.poly,...(b.holes||[])],bot:Math.min(...b.poly.map(p=>H(p[0],p[1]))),top:b.roof,wall:BCOL.wall,roof:BCOL.roof})}}catch(e){continue}
-    for(const p of parts){const e=Object.assign(rasterPoly(p.rings),{b,t:'p',jb:Math.floor(p.bot/S),jt:Math.ceil(p.top/S)-1,wall:p.wall,roof:p.roof});ents.push(e);put(e)}
-    const ib=typeof IB!=='undefined'&&IB.find(q=>q.bv===b);
-    if(ib)try{const d=ib.d,lv=b.lv,top=Math.max(b.floors||0,...d.floors.map(f=>{const m=/^(\d+)F$/.exec(f.id);return m?+m[1]:0}));
-      const fl=d.floors.map(f=>({f,y:lv?lvFloorY(lv,f.id,top):ib.base+f.y})).filter(q=>isFinite(q.y)).sort((a,c)=>a.y-c.y);
-      fl.forEach((q,n)=>{const sj=Math.floor(q.y/S)-1,nj=n+1<fl.length?Math.floor(fl[n+1].y/S)-1:sj+Math.round(3.6/S);
-        for(const sl of q.f.slabs||[])if(sl&&sl.length>2){const e=Object.assign(rasterPoly([sl]),{b,t:'s',j:sj,col:BCOL.floor});ents.push(e);put(e)}
-        if(q.f.walls&&q.f.walls.length>=4){const e=Object.assign(rasterSegs(q.f.walls),{b,t:'w',j0:sj+1,j1:nj-1,col:BCOL.iwall});ents.push(e);put(e)}})}catch(e){console.warn('실내 블록',e)}}}
+    const pe=parts.map(p=>Object.assign(rasterPoly(p.rings.map(r=>r.map(gp))),{b,t:'p',jb:Math.floor(p.bot/S),jt:Math.ceil(p.top/S)-1,wall:p.wall,roof:p.roof}));
+    const insideP=(i,k)=>pe.some(e=>{const c=i-e.i0,r=k-e.k0;return c>=0&&r>=0&&c<e.ni&&r<e.nk&&e.m[r*e.ni+c]});
+    // 실내 도면
+    const ib=typeof IB!=='undefined'&&IB.find(q=>q.bv===b);let fl=[];
+    if(ib)try{const dd=ib.d,lv=b.lv,top=Math.max(b.floors||0,...dd.floors.map(f=>{const m=/^(\d+)F$/.exec(f.id);return m?+m[1]:0}));
+      fl=dd.floors.map(f=>({f,y:lv?lvFloorY(lv,f.id,top):ib.base+f.y})).filter(q=>isFinite(q.y)).sort((a,c)=>a.y-c.y);
+      fl.forEach((q,n)=>{q.sj=Math.floor(q.y/S)-1;q.nj=n+1<fl.length?Math.floor(fl[n+1].y/S)-1:q.sj+Math.round(4.2/S);q.slabs=[];
+        for(const sl of q.f.slabs||[])if(sl&&sl.length>2)q.slabs.push(Object.assign(rasterPoly([sl.map(gp)]),{b,t:'s',j:q.sj,col:BCOL.floor}));
+        if(q.f.walls&&q.f.walls.length>=4){const w=[];for(let t=0;t+3<q.f.walls.length;t+=4){const a=gp([q.f.walls[t],q.f.walls[t+1]]),c=gp([q.f.walls[t+2],q.f.walls[t+3]]);w.push(a[0],a[1],c[0],c[1])}q.walls=Object.assign(rasterSegs(w),{b,t:'w',j0:q.sj+1,j1:q.nj-1,col:BCOL.iwall})}});
+      // 높이 다시 맞추기: 겉모양을 도면의 가장 낮은 층 바닥 ~ 가장 높은 층 천장에 맞춘다
+      for(const e of pe){let lo=null,hi=null;for(const q of fl)for(const sl of q.slabs)if(sl.i0<e.i0+e.ni&&sl.i0+sl.ni>e.i0&&sl.k0<e.k0+e.nk&&sl.k0+sl.nk>e.k0){lo=lo==null?q.sj:Math.min(lo,q.sj);hi=hi==null?q.nj:Math.max(hi,q.nj)}
+        if(hi!=null){e.jt=hi;e.jb=Math.min(e.jb,lo)}}
+      // 계단: 도면의 「올라감」 표시마다 다음 층까지 이어지는 곧은 블록 계단(폭 5칸). 위층 바닥은 머리 닿는 곳만 뚫고, 계단 자리의 실내 벽은 지운다
+      fl.forEach((q,n)=>{if(n+1>=fl.length)return;const L=q.nj-q.sj;if(L<2||L>40)return;
+        for(const st of q.f.stairs||[]){if(st.t!=='UP')continue;const g=gp([st.x,st.z]),ci=Math.floor(g[0]/S),ck2=Math.floor(g[1]/S);let best=null;
+          for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){let ok=0;for(let s2=0;s2<L;s2++)for(let w=-2;w<=2;w++){const i=ci+dx*s2+(dz?w:0),k=ck2+dz*s2+(dx?w:0),wm=q.walls,c=wm?i-wm.i0:-1,r=wm?k-wm.k0:-1,isW=wm&&c>=0&&r>=0&&c<wm.ni&&r<wm.nk&&wm.m[r*wm.ni+c];if(!isW&&insideP(i,k))ok++}if(!best||ok>best.ok)best={ok,dx,dz}}
+          const {dx,dz}=best,cells=[];for(let s2=0;s2<L;s2++)for(let w=-2;w<=2;w++)cells.push([ci+dx*s2+(dz?w:0),ck2+dz*s2+(dx?w:0),s2]);
+          let i0=1e9,k0=1e9,i1=-1e9,k1=-1e9;for(const [i,k] of cells){i0=Math.min(i0,i);k0=Math.min(k0,k);i1=Math.max(i1,i);k1=Math.max(k1,k)}
+          const ni=i1-i0+1,nk=k1-k0+1,m=new Uint8Array(ni*nk),top=new Int16Array(ni*nk);for(const [i,k,s2] of cells){m[(k-k0)*ni+i-i0]=1;top[(k-k0)*ni+i-i0]=q.sj+1+s2}
+          const e={b,t:'st',i0,k0,ni,nk,m,top,j0:q.sj+1,jz:q.sj+L,col:'#a39887'};ents.push(e);put(e);
+          const up=fl[n+1];for(const [i,k,s2] of cells){if(s2>=L-9)for(const sl of up.slabs){const c=i-sl.i0,r=k-sl.k0;if(c>=0&&r>=0&&c<sl.ni&&r<sl.nk)sl.m[r*sl.ni+c]=0}const wm=q.walls;if(wm){const c=i-wm.i0,r=k-wm.k0;if(c>=0&&r>=0&&c<wm.ni&&r<wm.nk)wm.m[r*wm.ni+c]=0}}}})}catch(e){console.warn('실내 블록',e)}
+    for(const e of pe){ents.push(e);put(e)}
+    for(const q of fl){for(const sl of q.slabs){ents.push(sl);put(sl);
+        // 도면이 겉모양 밖으로 튀어나온 곳: 그 층 높이만큼 벽을 두르고 위를 지붕으로 덮는다
+        const m=new Uint8Array(sl.ni*sl.nk);let n=0;for(let r=0;r<sl.nk;r++)for(let c=0;c<sl.ni;c++){if(sl.m[r*sl.ni+c]&&!insideP(sl.i0+c,sl.k0+r)){m[r*sl.ni+c]=1;n++}}
+        if(n>8){for(let r=0;r<sl.nk;r++)for(let c=0;c<sl.ni;c++){const t=r*sl.ni+c;if(!m[t])continue;const nb=(cc,rr)=>cc>=0&&rr>=0&&cc<sl.ni&&rr<sl.nk&&(m[rr*sl.ni+cc]||insideP(sl.i0+cc,sl.k0+rr));if(!nb(c-1,r)||!nb(c+1,r)||!nb(c,r-1)||!nb(c,r+1))m[t]=2}
+          const e={b,t:'p',i0:sl.i0,k0:sl.k0,ni:sl.ni,nk:sl.nk,m,jb:q.sj,jt:q.nj,wall:(parts[0]||{}).wall||BCOL.wall,roof:(parts[0]||{}).roof||BCOL.roof};ents.push(e);put(e)}}
+      if(q.walls){ents.push(q.walls);put(q.walls)}}}}
 // 건물이 그 칸에 두는 블록 색(없으면 null). 켜진(가까이 간) 건물만
 function bcell(i,j,k){if(!BIDX)return null;const L=BIDX.get(Math.floor(i/32)+','+Math.floor(k/32));if(!L)return null;let out=null;
   for(const e of L){if(!e.b._act)continue;const c=i-e.i0,r=k-e.k0;if(c<0||r<0||c>=e.ni||r>=e.nk)continue;const m=e.m[r*e.ni+c];if(!m)continue;
     if(e.t==='p'){if(j<e.jb||j>e.jt)continue;if(m===2||j===e.jt||j===e.jb){if(e.b._door.size&&e.b._door.has(key(i,j,k)))continue;return j===e.jt?e.roof:(m===2?e.wall:BCOL.floor)}}
     else if(e.t==='s'){if(j===e.j&&!out)out=e.col}
+    else if(e.t==='st'){if(j>=e.j0&&j<=e.top[r*e.ni+c])return e.col}
     else if(e.j0<=j&&j<=e.j1&&!out&&!(e.b._door.size&&e.b._door.has(key(i,j,k))))out=e.col}
   return out}
 const eff=(i,j,k)=>{const u=VOX.get(key(i,j,k));if(u)return u.air?null:u.c;return bcell(i,j,k)};
@@ -58,26 +89,26 @@ const eff=(i,j,k)=>{const u=VOX.get(key(i,j,k));if(u)return u.air?null:u.c;retur
 let DOORS=false;
 async function loadDoors(){if(DOORS)return;DOORS=true;try{const d=await (await fetch('/data/v1/entrances.json')).json();
   for(const e of d.entrances||[]){const b=B.find(q=>q.code&&q.code===e.buildingCode&&q._bents)||B.find(q=>q._bents&&q.name&&e.building&&q.name.startsWith(e.building));if(!b)continue;
-    const x=(e.at[1]-126.8013923)*88270,z=(37.4867837-e.at[0])*110950;let y=null;try{y=CUKPICK.floorY(b,e.floor)}catch(_){}if(!isFinite(y))y=H(x,z);
+    const x0=(e.at[1]-126.8013923)*88270,z0=(37.4867837-e.at[0])*110950;let y=null;try{y=CUKPICK.floorY(b,e.floor)}catch(_){}if(!isFinite(y))y=H(x0,z0);const [x,z]=G(...b._sn([x0,z0]));
     const ci=Math.floor(x/S),ck2=Math.floor(z/S),j0=Math.floor((y+.01)/S),j1=Math.floor((y+2.4)/S);
     for(let a=-5;a<=5;a++)for(let c=-5;c<=5;c++){if(a*a+c*c>25)continue;for(let j=j0;j<=j1;j++){b._door.add(key(ci+a,j,ck2+c));if(b._act)DIRTY.add(ck(ci+a,j,ck2+c))}}}}catch(e){console.warn('출입구',e)}}
 // 켜기: 그 건물이 걸친 덩어리들을 가까운 것부터 만들고, 다 만들면 원래 건물 모양은 숨긴다
 const BQ=[];let BQh=0;
 function activate(b,px,pz){if(b._act||!b._bents||!b._bents.length)return;b._act=true;const cs=new Set();
-  for(const e of b._bents){const J=e.t==='p'?[e.jb,e.jt]:e.t==='s'?[e.j,e.j]:[e.j0,e.j1];
+  for(const e of b._bents){const J=e.t==='p'?[e.jb,e.jt]:e.t==='s'?[e.j,e.j]:e.t==='st'?[e.j0,e.jz]:[e.j0,e.j1];
     for(let r=0;r<e.nk;r++)for(let c=0;c<e.ni;c++){const m=e.m[r*e.ni+c];if(!m)continue;const i=e.i0+c,k=e.k0+r;
       if(e.t==='p'&&m===1){cs.add(ck(i,J[0],k));cs.add(ck(i,J[1],k))}else{for(let j=J[0];j<=J[1];j+=CH)cs.add(ck(i,j,k));cs.add(ck(i,J[1],k))}}}
-  const L=[...cs].map(C=>{const p=C.split(',').map(Number);return {C,b,d:Math.hypot((p[0]+.5)*CH*S-px,(p[2]+.5)*CH*S-pz)}}).sort((a,c)=>a.d-c.d);
+  const L=[...cs].map(C=>{const p=C.split(',').map(Number);const w=W((p[0]+.5)*CH*S,(p[2]+.5)*CH*S);return {C,b,d:Math.hypot(w[0]-px,w[1]-pz)}}).sort((a,c)=>a.d-c.d);
   b._pending=L.length;for(const q of L)BQ.push(q);if(!L.length)VSKIP.push(b)}
-function nearBuildings(px,pz,R){bvAll();for(const b of B){if(!b._bents||b._act)continue;const e=b._bents[0];if(!e)continue;const x0=e.i0*S,z0=e.k0*S,x1=(e.i0+e.ni)*S,z1=(e.k0+e.nk)*S;
-  const dx=Math.max(x0-px,0,px-x1),dz=Math.max(z0-pz,0,pz-z1);if(Math.hypot(dx,dz)<R)activate(b,px,pz)}}
+function nearBuildings(wx,wz,R){bvAll();const [px,pz]=G(wx,wz);for(const b of B){if(!b._bents||b._act)continue;const e=b._bents[0];if(!e)continue;const x0=e.i0*S,z0=e.k0*S,x1=(e.i0+e.ni)*S,z1=(e.k0+e.nk)*S;
+  const dx=Math.max(x0-px,0,px-x1),dz=Math.max(z0-pz,0,pz-z1);if(Math.hypot(dx,dz)<R)activate(b,wx,wz)}}
 const N1=CH+2,GC=new Array(N1*N1*N1),GK=new Uint8Array(N1*N1*N1),RGB=new Map();
 const rgbOf=c=>{let v=RGB.get(c);if(!v){v=hex(c);RGB.set(c,v)}return v};
 function rebuild(C){const p=C.split(',').map(Number),i0=p[0]*CH,j0=p[1]*CH,k0=p[2]*CH;
   let hasU=false;for(const [a,b,c] of [[0,0,0],[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]){const s2=CHUNK.get((p[0]+a)+','+(p[1]+b)+','+(p[2]+c));if(s2&&s2.size){hasU=true;break}}
   // 이 덩어리에 걸친 건물 조각만 미리 추림(칸마다 문자열 키를 만들지 않게)
   const E=[];if(BIDX){const seen=new Set();for(let a=Math.floor((i0-1)/32);a<=Math.floor((i0+CH)/32);a++)for(let c=Math.floor((k0-1)/32);c<=Math.floor((k0+CH)/32);c++){const L=BIDX.get(a+','+c);if(L)for(const e of L){if(seen.has(e)||!e.b._act)continue;seen.add(e);
-    const ja=e.t==='p'?e.jb:e.t==='s'?e.j:e.j0,jz=e.t==='p'?e.jt:e.t==='s'?e.j:e.j1;if(jz<j0-1||ja>j0+CH||e.i0>i0+CH||e.i0+e.ni<i0-1||e.k0>k0+CH||e.k0+e.nk<k0-1)continue;E.push(e)}}}
+    const ja=e.t==='p'?e.jb:e.t==='s'?e.j:e.j0,jz=e.t==='p'?e.jt:e.t==='s'?e.j:e.t==='st'?e.jz:e.j1;if(jz<j0-1||ja>j0+CH||e.i0>i0+CH||e.i0+e.ni<i0-1||e.k0>k0+CH||e.k0+e.nk<k0-1)continue;E.push(e)}}}
   const old=MESH.get(C);if(old){if(old.b)gl.deleteBuffer(old.b.buffer);if(old.u)gl.deleteBuffer(old.u.buffer);MESH.delete(C)}
   if(!E.length&&!hasU)return;
   let any=false;
@@ -86,7 +117,7 @@ function rebuild(C){const p=C.split(',').map(Number),i0=p[0]*CH,j0=p[1]*CH,k0=p[
     if(u){if(!u.air){v=u.c;kd=1}}
     else if(E.length){let o=null;for(const e of E){const cc=i-e.i0,r=k-e.k0;if(cc<0||r<0||cc>=e.ni||r>=e.nk)continue;const m=e.m[r*e.ni+cc];if(!m)continue;
         if(e.t==='p'){if(j<e.jb||j>e.jt)continue;if(m===2||j===e.jt||j===e.jb){if(e.b._door.size&&e.b._door.has(key(i,j,k)))continue;o=j===e.jt?e.roof:(m===2?e.wall:BCOL.floor);break}}
-        else if(e.t==='s'){if(j===e.j&&!o)o=e.col}else if(e.j0<=j&&j<=e.j1&&!o&&!(e.b._door.size&&e.b._door.has(key(i,j,k))))o=e.col}
+        else if(e.t==='s'){if(j===e.j&&!o)o=e.col}else if(e.t==='st'){if(j>=e.j0&&j<=e.top[r*e.ni+cc]){o=e.col;break}}else if(e.j0<=j&&j<=e.j1&&!o&&!(e.b._door.size&&e.b._door.has(key(i,j,k))))o=e.col}
       if(o){v=o;kd=2}}
     GC[q]=v;GK[q]=kd;if(kd&&a&&b2&&c&&a<N1-1&&b2<N1-1&&c<N1-1)any=true}}}
   if(!any)return;const mb=[],mu=[],base=[i0,j0,k0],mask=new Array(CH*CH),ST=[N1*N1,N1,1],B0=N1*N1+N1+1;
@@ -98,7 +129,7 @@ function rebuild(C){const p=C.split(',').map(Number),i0=p[0]*CH,j0=p[1]*CH,k0=p[
         for(let y=0;y<h;y++)for(let t=0;t<w;t++)mask[(a+y)*CH+b2+t]=null;
         const cor=(au,bv)=>{const P=[0,0,0];P[d]=pl;P[u]=au;P[v]=bv;return [(base[0]+P[0])*S,(base[1]+P[1])*S,(base[2]+P[2])*S]};
         const c0=cor(a,b2),c1=cor(a+h,b2),c2=cor(a+h,b2+w),c3=cor(a,b2+w),rgb=rgbOf(m.slice(1)),arr=m[0]==='1'?mu:mb;
-        for(const V of [c0,c1,c2,c0,c2,c3])arr.push(V[0],V[1],V[2],nrm[0],nrm[1],nrm[2],rgb[0],rgb[1],rgb[2],0,0);b2+=w}}}}
+        for(const V of [c0,c1,c2,c0,c2,c3])pv(arr,V[0],V[1],V[2],nrm[0],nrm[1],nrm[2],rgb);b2+=w}}}}
   const o={b:null,u:null};if(mb.length){o.b=upload(mb);o.b.src=undefined}if(mu.length){o.u=upload(mu);o.u.src=undefined;o.u.__keep=1}MESH.set(C,o)}
 // ---- 누른 곳 찾기: 화면의 한 점에서 카메라 방향으로 조금씩 나아가며 블록·땅·건물에 처음 닿는 곳
 function inv(a){const o=new Float32Array(16);const b00=a[0]*a[5]-a[1]*a[4],b01=a[0]*a[6]-a[2]*a[4],b02=a[0]*a[7]-a[3]*a[4],b03=a[1]*a[6]-a[2]*a[5],b04=a[1]*a[7]-a[3]*a[5],b05=a[2]*a[7]-a[3]*a[6],b06=a[8]*a[13]-a[9]*a[12],b07=a[8]*a[14]-a[10]*a[12],b08=a[8]*a[15]-a[11]*a[12],b09=a[9]*a[14]-a[10]*a[13],b10=a[9]*a[15]-a[11]*a[13],b11=a[10]*a[15]-a[11]*a[14];let det=b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06;if(!det)return null;det=1/det;
@@ -110,7 +141,7 @@ function solidB(x,y,z){if(!BB)BB=B.filter(b=>b.poly&&b.poly.length>2&&b.roof>-1e
 function pickAt(cx,cy,o){o=o||{};const r=canvas.getBoundingClientRect(),nx=(cx-r.left)/r.width*2-1,ny=1-(cy-r.top)/r.height*2,I=camera.mvp&&inv(camera.mvp);if(!I)return null;
   const a=tr(I,nx,ny,-1),b=tr(I,nx,ny,1);let dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2];const L=Math.hypot(dx,dy,dz);dx/=L;dy/=L;dz/=L;
   const st=.04,max=Math.min(L,o.max||600);let prev=null;
-  for(let t=0;t<max;t+=t<80?st:st*3){const x=a[0]+dx*t,y=a[1]+dy*t,z=a[2]+dz*t,c=[Math.floor(x/S),Math.floor(y/S),Math.floor(z/S)];
+  for(let t=0;t<max;t+=t<80?st:st*3){const x=a[0]+dx*t,y=a[1]+dy*t,z=a[2]+dz*t,gg=G(x,z),c=[Math.floor(gg[0]/S),Math.floor(y/S),Math.floor(gg[1]/S)];
     if(prev&&c[0]===prev[0]&&c[1]===prev[1]&&c[2]===prev[2])continue;
     if(FL?eff(c[0],c[1],c[2])!=null:VOX.has(key(c[0],c[1],c[2])))return {hit:'vox',cell:c,prev};
     if(y<H(x,z)-.02||(!FL&&solidB(x,y,z))||(o.surf&&t<60&&onSurf(x,y,z)))return prev?{hit:'ground',cell:null,prev}:null;
@@ -159,17 +190,17 @@ function surfBuild(){SURF=new Map();const objs=[typeof build!=='undefined'?build
 // (x,z)에서 높이 yMax 이하에 있는 가장 높은 디딤면
 function surfAt(x,z,yMax){if(!SURF)surfBuild();let h=H(x,z);const L=SURF.get(Math.floor(x/BKT)+','+Math.floor(z/BKT));
   if(L)for(const T of L){const d=(T[5]-T[8])*(T[0]-T[6])+(T[6]-T[3])*(T[2]-T[8]);if(!d)continue;const a=((T[5]-T[8])*(x-T[6])+(T[6]-T[3])*(z-T[8]))/d,b=((T[8]-T[2])*(x-T[6])+(T[0]-T[6])*(z-T[8]))/d,c=1-a-b;if(a<-1e-4||b<-1e-4||c<-1e-4)continue;const y=a*T[1]+b*T[4]+c*T[7];if(y<=yMax+.002&&y>h)h=y}
-  const i=Math.floor(x/S),k=Math.floor(z/S);for(let j=Math.floor((yMax+.002)/S),n=0;n<64;j--,n++){if(eff(i,j,k)!=null){const top=(j+1)*S;if(top<=yMax+.002&&top>h)h=top;break}}
+  const gg=G(x,z),i=Math.floor(gg[0]/S),k=Math.floor(gg[1]/S);for(let j=Math.floor((yMax+.002)/S),n=0;n<64;j--,n++){if(eff(i,j,k)!=null){const top=(j+1)*S;if(top<=yMax+.002&&top>h)h=top;break}}
   return h}
 function onSurf(x,y,z){const g=surfAt(x,z,y+.02);return y<=g+.02&&y>g-.35}
 // 몸이 들어갈 수 없는 곳(건물 안, 블록)
 function blocked(x,y,z){for(const [dx,dz] of [[0,0],[RAD,0],[-RAD,0],[0,RAD],[0,-RAD]]){const px=x+dx,pz=z+dz;
-    for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(Math.floor(px/S),Math.floor(py/S),Math.floor(pz/S))!=null)return true}}return false}
+    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true}}return false}
 let FL=null;const held={};
 function slotItem(){return FL&&FL.slots[FL.slot]||{color:'#c0392b'}}
 function center(){const r=canvas.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
 function aim(){const [cx,cy]=center();return pickAt(cx,cy,{max:REACH,surf:true})}
-function bodyHits(c){if(!FL)return false;const x0=c[0]*S,y0=c[1]*S,z0=c[2]*S;return x0<FL.x+RAD&&x0+S>FL.x-RAD&&z0<FL.z+RAD&&z0+S>FL.z-RAD&&y0<FL.y+1.8&&y0+S>FL.y}
+function bodyHits(c){if(!FL)return false;const x0=c[0]*S,y0=c[1]*S,z0=c[2]*S,[fx,fz]=G(FL.x,FL.z);return x0<fx+RAD&&x0+S>fx-RAD&&z0<fz+RAD&&z0+S>fz-RAD&&y0<FL.y+1.8&&y0+S>FL.y}
 function doBreak(){const p=aim();if(!p||p.hit!=='vox')return;const [i,j,k]=p.cell,u=VOX.get(key(i,j,k)),was=u?u.c:null,c=bcell(i,j,k)?'air':null;if(c===was)return;setCell(i,j,k,c);post({event:'voxel',cells:[[i,j,k,c]],before:[[i,j,k,was]]})}
 function doPlace(){const p=aim();if(!p||!p.prev)return;const it=slotItem(),cells=[],before=[];
   if(it.stamp){const [i,j,k]=p.prev;for(const [a,b,d,c] of it.stamp){const q=[i+a,j+b,k+d],h=VOX.get(key(...q));if(h&&h.c===c)continue;if(!setCell(q[0],q[1],q[2],c))break;cells.push([...q,c]);before.push([...q,h?h.c:null])}}
@@ -177,7 +208,7 @@ function doPlace(){const p=aim();if(!p||!p.prev)return;const it=slotItem(),cells
   if(cells.length)post({event:'voxel',cells,before})}
 function doPick(){const p=aim();if(!p||p.hit!=='vox')return;const c=eff(...p.cell);if(!c)return;FL.slots[FL.slot]={color:c};post({event:'fly',slot:FL.slot,slots:FL.slots.map(s=>s.color?{color:s.color}:{stamp:true,name:s.name})})}
 let outline=null,outKey='',aimT=0;
-function box(m,x0,y0,z0,x1,y1,z1,rgb){for(const [nx,ny,nz,q] of F){const v=q.map(([a,b,d])=>[a?x1:x0,b?y1:y0,d?z1:z0]);for(const t of [0,1,2,0,2,3])m.push(v[t][0],v[t][1],v[t][2],nx,ny,nz,rgb[0],rgb[1],rgb[2],0,0)}}
+function box(m,x0,y0,z0,x1,y1,z1,rgb){for(const [nx,ny,nz,q] of F){const v=q.map(([a,b,d])=>[a?x1:x0,b?y1:y0,d?z1:z0]);for(const t of [0,1,2,0,2,3])pv(m,v[t][0],v[t][1],v[t][2],nx,ny,nz,rgb)}}
 function setOutline(c,rgb){const K=c?c.join()+rgb.join():'';if(K===outKey)return;outKey=K;if(outline){gl.deleteBuffer(outline.buffer);outline=null}if(!c)return;const m=[],e=.012,x0=c[0]*S-e,y0=c[1]*S-e,z0=c[2]*S-e,x1=x0+S+2*e,y1=y0+S+2*e,z1=z0+S+2*e,w=.014;
   for(const [a,b] of [[y0,z0],[y1,z0],[y0,z1],[y1,z1]])box(m,x0,a-w,b-w,x1,a+w,b+w,rgb);for(const [a,b] of [[x0,z0],[x1,z0],[x0,z1],[x1,z1]])box(m,a-w,y0,b-w,a+w,y1,b+w,rgb);for(const [a,b] of [[x0,y0],[x1,y0],[x0,y1],[x1,y1]])box(m,a-w,b-w,z0,a+w,b+w,z1,rgb);
   outline=upload(m);outline.__keep=1}
@@ -234,5 +265,5 @@ function voxelApply(cells){let n=0;for(const q of cells||[]){if(!Array.isArray(q
 function voxelReset(cells){for(const C of CHUNK.keys())DIRTY.add(C);VOX.clear();CHUNK.clear();return voxelApply(cells)}
 function voxelInfo(){return {count:VOX.size,size:S,max:MAX}}
 Object.assign(globalThis.__KIT||{},{voxelMode,voxelApply,voxelReset,voxelInfo,voxelFly});
-globalThis.__VOXDBG={surfAt,blocked,get FL(){return FL},aim,doPlace,doBreak,eff,bcell,VSKIP,MESH,BQ:()=>BQ.length-BQh,findB:n=>CUKPICK.findB(n)};
+globalThis.__VOXDBG={surfAt,blocked,get FL(){return FL},aim,doPlace,doBreak,eff,bcell,VSKIP,MESH,BQ:()=>BQ.length-BQh,findB:n=>CUKPICK.findB(n),TH,stats:()=>{bvAll();const o={};for(const b of B)for(const e of b._bents||[])o[e.t]=(o[e.t]||0)+1;return o}};
 })()}
