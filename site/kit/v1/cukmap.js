@@ -71,6 +71,7 @@
       voxelApply: function (cells) { return call('voxelApply', cells); },
       voxelReset: function (cells) { return call('voxelReset', cells); },
       voxelInfo: function () { return call('voxelInfo'); },
+      voxelFly: function (o) { return call('voxelFly', o); },
       showSheets: function (on, o) { return call('showSheets', on, o); },
       sheetOpacity: function (v) { return call('sheetOpacity', v); },
       /** 건물 목록: [{id, code, name, floors, indoor:[층...]}] */

@@ -13,7 +13,7 @@ function rayPlane(ray,y){if(!ray||Math.abs(ray.d[1])<1e-4)return null;const t=(y
 function rayGround(ray){if(!ray)return null;let t0=0,p=ray.o,step=2;for(let t=step;t<3200;t+=step){const q=[ray.o[0]+ray.d[0]*t,ray.o[1]+ray.d[1]*t,ray.o[2]+ray.d[2]*t];if(q[1]<=H(q[0],q[2])){let lo=t-step,hi=t;for(let k=0;k<14;k++){const m=(lo+hi)/2,r=[ray.o[0]+ray.d[0]*m,ray.o[1]+ray.d[1]*m,ray.o[2]+ray.d[2]*m];if(r[1]<=H(r[0],r[2]))hi=m;else lo=m}const m=hi;return [ray.o[0]+ray.d[0]*m,ray.o[1]+ray.d[1]*m,ray.o[2]+ray.d[2]*m]}if(t>60)step=Math.min(8,step*1.02)}return null}
 const groundAt=(cx,cy)=>{const r=screenRay(cx,cy);return rayGround(r)||rayPlane(r,camera.target[1])};
 const CB=EXT.bounds,clampT=t=>[clamp(t[0],CB[0],CB[1]),t[1],clamp(t[2],CB[2],CB[3])];
-function ctlUpdate(dt){
+function ctlUpdate(dt){if(globalThis.__FLY)return;
  if(camera.mode==='walk'){walkUpdate(dt);CTL.goal=null;return}
  if(!CTL.goal){CTL.goal=camSnap();CTL.applied=camSnap();if(camera.target===undefined)return}
  // external writes (건물 선택, 전체 보기, 경로 보기 등) → 부드럽게 따라가기

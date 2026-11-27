@@ -24,13 +24,13 @@ const tr=(m,x,y,z)=>{const w=m[3]*x+m[7]*y+m[11]*z+m[15];return [(m[0]*x+m[4]*y+
 let BB=null;
 function solidB(x,y,z){if(!BB)BB=B.filter(b=>b.poly&&b.poly.length>2&&b.roof>-1e8).map(b=>{const xs=b.poly.map(q=>q[0]),zs=b.poly.map(q=>q[1]);return {b,x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)}});
   for(const o of BB){if(x<o.x0||x>o.x1||z<o.z0||z>o.z1||y>o.b.roof)continue;const P=o.b.poly;let c=false;for(let a=0,d=P.length-1;a<P.length;d=a++){const p=P[a],q=P[d];if((p[1]>z)!==(q[1]>z)&&x<(q[0]-p[0])*(z-p[1])/(q[1]-p[1])+p[0])c=!c}if(c)return true}return false}
-function pickAt(cx,cy){const r=canvas.getBoundingClientRect(),nx=(cx-r.left)/r.width*2-1,ny=1-(cy-r.top)/r.height*2,I=camera.mvp&&inv(camera.mvp);if(!I)return null;
+function pickAt(cx,cy,o){o=o||{};const r=canvas.getBoundingClientRect(),nx=(cx-r.left)/r.width*2-1,ny=1-(cy-r.top)/r.height*2,I=camera.mvp&&inv(camera.mvp);if(!I)return null;
   const a=tr(I,nx,ny,-1),b=tr(I,nx,ny,1);let dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2];const L=Math.hypot(dx,dy,dz);dx/=L;dy/=L;dz/=L;
-  const st=.05,max=Math.min(L,600);let prev=null;
+  const st=.04,max=Math.min(L,o.max||600);let prev=null;
   for(let t=0;t<max;t+=t<80?st:st*3){const x=a[0]+dx*t,y=a[1]+dy*t,z=a[2]+dz*t,c=[Math.floor(x/S),Math.floor(y/S),Math.floor(z/S)];
     if(prev&&c[0]===prev[0]&&c[1]===prev[1]&&c[2]===prev[2])continue;
     if(VOX.has(key(c[0],c[1],c[2])))return {hit:'vox',cell:c,prev};
-    if(y<H(x,z)-.02||solidB(x,y,z))return prev?{hit:'ground',cell:null,prev}:null;
+    if(y<H(x,z)-.02||solidB(x,y,z)||(o.surf&&t<60&&onSurf(x,y,z)))return prev?{hit:'ground',cell:null,prev}:null;
     prev=c}
   return null}
 // ---- 도구
@@ -54,12 +54,95 @@ canvas.addEventListener('pointerleave',()=>{ghostKey='';if(ghost){gl.deleteBuffe
 // ---- 그리기: 프레임마다 바뀐 덩어리만 다시 만들고 전부 그린다
 const prevC=globalThis.__CAN;globalThis.__CAN=()=>{prevC&&prevC();let n=0;for(const C of DIRTY){rebuild(C);DIRTY.delete(C);if(++n>40)break}
   for(const o of MESH.values())renderObj(o,camera.mvp,0);
-  if(ghost){gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(-1,-2);renderObj(ghost,camera.mvp,0);gl.disable(gl.POLYGON_OFFSET_FILL)}};
+  if(ghost){gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(-1,-2);renderObj(ghost,camera.mvp,0);gl.disable(gl.POLYGON_OFFSET_FILL)}
+  if(outline)renderObj(outline,camera.mvp,0)};
 function voxelMode(o){o=o||{};MODE=Object.assign({},MODE,o);if(o.stamp)MODE.stamp=o.stamp.filter(q=>Array.isArray(q)&&q.length>=4).slice(0,4000);ghostKey='';if(ghost){gl.deleteBuffer(ghost.buffer);ghost=null}
   if(MODE.tool)globalThis.__NOPICK=true;canvas.style.cursor=MODE.tool?'crosshair':'';return {tool:MODE.tool}}
 const okC=c=>c===null||/^#[0-9a-f]{6}$/i.test(c);
+
+// ===== 1인칭 만들기 모드 (마인크래프트 크리에이티브처럼) =====
+// WASD 이동 · 마우스 시점 · 스페이스 점프(두 번 누르면 날기, 날 때 스페이스 위/쉬프트 아래) · Ctrl 달리기
+// 왼쪽 클릭 부수기 · 오른쪽 클릭 놓기 · 휠 클릭 색 집기 · 1~9/휠 손에 든 것 바꾸기 · E 색 고르기 · Esc 메뉴
+// 발밑: 등고선 땅만이 아니라 계단·옥상·턱·캐노피 같은 실제로 그려진 윗면과 블록 위를 밟는다
+const EYE=1.62,STEP=.6,RAD=.28,REACH=8;
+let SURF=null;const BKT=4;
+function surfBuild(){SURF=new Map();const objs=[typeof build!=='undefined'?build:null,typeof roofObj!=='undefined'?roofObj:null,typeof extObj!=='undefined'?extObj:null,typeof cadObj!=='undefined'?cadObj:null].filter(o=>o&&o.src);for(const o of globalThis.__SHX||[])if(o&&o.src)objs.push(o);
+  for(const o of objs){const a=o.src;for(let t=0;t+32<a.length;t+=33){const x0=a[t],y0=a[t+1],z0=a[t+2],x1=a[t+11],y1=a[t+12],z1=a[t+13],x2=a[t+22],y2=a[t+23],z2=a[t+24];
+    const ux=x1-x0,uy=y1-y0,uz=z1-z0,vx=x2-x0,vy=y2-y0,vz=z2-z0,nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,l=Math.hypot(nx,ny,nz);if(!l||Math.abs(ny)/l<.55)continue;
+    const T=[x0,y0,z0,x1,y1,z1,x2,y2,z2],bx0=Math.floor(Math.min(x0,x1,x2)/BKT),bx1=Math.floor(Math.max(x0,x1,x2)/BKT),bz0=Math.floor(Math.min(z0,z1,z2)/BKT),bz1=Math.floor(Math.max(z0,z1,z2)/BKT);
+    if((bx1-bx0+1)*(bz1-bz0+1)>400)continue;for(let bx=bx0;bx<=bx1;bx++)for(let bz=bz0;bz<=bz1;bz++){const K=bx+','+bz;if(!SURF.has(K))SURF.set(K,[]);SURF.get(K).push(T)}}}}
+// (x,z)에서 높이 yMax 이하에 있는 가장 높은 디딤면
+function surfAt(x,z,yMax){if(!SURF)surfBuild();let h=H(x,z);const L=SURF.get(Math.floor(x/BKT)+','+Math.floor(z/BKT));
+  if(L)for(const T of L){const d=(T[5]-T[8])*(T[0]-T[6])+(T[6]-T[3])*(T[2]-T[8]);if(!d)continue;const a=((T[5]-T[8])*(x-T[6])+(T[6]-T[3])*(z-T[8]))/d,b=((T[8]-T[2])*(x-T[6])+(T[0]-T[6])*(z-T[8]))/d,c=1-a-b;if(a<-1e-4||b<-1e-4||c<-1e-4)continue;const y=a*T[1]+b*T[4]+c*T[7];if(y<=yMax+.002&&y>h)h=y}
+  const i=Math.floor(x/S),k=Math.floor(z/S);for(let j=Math.floor((yMax+.002)/S),n=0;n<16;j--,n++){if(VOX.has(key(i,j,k))){const top=(j+1)*S;if(top<=yMax+.002&&top>h)h=top;break}}
+  return h}
+function onSurf(x,y,z){const g=surfAt(x,z,y+.02);return y<=g+.02&&y>g-.35}
+// 몸이 들어갈 수 없는 곳(건물 안, 블록)
+function blocked(x,y,z){for(const [dx,dz] of [[0,0],[RAD,0],[-RAD,0],[0,RAD],[0,-RAD]]){const px=x+dx,pz=z+dz;
+    for(const hy of [.3,1,1.7]){const py=y+hy;if(solidB(px,py,pz))return true;if(VOX.has(key(Math.floor(px/S),Math.floor(py/S),Math.floor(pz/S))))return true}}return false}
+let FL=null;const held={};
+function slotItem(){return FL&&FL.slots[FL.slot]||{color:'#c0392b'}}
+function center(){const r=canvas.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
+function aim(){const [cx,cy]=center();return pickAt(cx,cy,{max:REACH,surf:true})}
+function bodyHits(c){if(!FL)return false;const x0=c[0]*S,y0=c[1]*S,z0=c[2]*S;return x0<FL.x+RAD&&x0+S>FL.x-RAD&&z0<FL.z+RAD&&z0+S>FL.z-RAD&&y0<FL.y+1.8&&y0+S>FL.y}
+function doBreak(){const p=aim();if(!p||p.hit!=='vox')return;const [i,j,k]=p.cell,had=VOX.get(key(i,j,k));setCell(i,j,k,null);post({event:'voxel',cells:[[i,j,k,null]],before:[[i,j,k,had.c]]})}
+function doPlace(){const p=aim();if(!p||!p.prev)return;const it=slotItem(),cells=[],before=[];
+  if(it.stamp){const [i,j,k]=p.prev;for(const [a,b,d,c] of it.stamp){const q=[i+a,j+b,k+d],h=VOX.get(key(...q));if(h&&h.c===c)continue;if(!setCell(q[0],q[1],q[2],c))break;cells.push([...q,c]);before.push([...q,h?h.c:null])}}
+  else{const q=p.prev;if(bodyHits(q)||VOX.has(key(...q)))return;setCell(q[0],q[1],q[2],it.color);cells.push([...q,it.color]);before.push([...q,null])}
+  if(cells.length)post({event:'voxel',cells,before})}
+function doPick(){const p=aim();if(!p||p.hit!=='vox')return;const c=VOX.get(key(...p.cell)).c;FL.slots[FL.slot]={color:c};post({event:'fly',slot:FL.slot,slots:FL.slots.map(s=>s.color?{color:s.color}:{stamp:true,name:s.name})})}
+let outline=null,outKey='',aimT=0;
+function box(m,x0,y0,z0,x1,y1,z1,rgb){for(const [nx,ny,nz,q] of F){const v=q.map(([a,b,d])=>[a?x1:x0,b?y1:y0,d?z1:z0]);for(const t of [0,1,2,0,2,3])m.push(v[t][0],v[t][1],v[t][2],nx,ny,nz,rgb[0],rgb[1],rgb[2],0,0)}}
+function setOutline(c,rgb){const K=c?c.join()+rgb.join():'';if(K===outKey)return;outKey=K;if(outline){gl.deleteBuffer(outline.buffer);outline=null}if(!c)return;const m=[],e=.012,x0=c[0]*S-e,y0=c[1]*S-e,z0=c[2]*S-e,x1=x0+S+2*e,y1=y0+S+2*e,z1=z0+S+2*e,w=.014;
+  for(const [a,b] of [[y0,z0],[y1,z0],[y0,z1],[y1,z1]])box(m,x0,a-w,b-w,x1,a+w,b+w,rgb);for(const [a,b] of [[x0,z0],[x1,z0],[x0,z1],[x1,z1]])box(m,a-w,y0,b-w,a+w,y1,b+w,rgb);for(const [a,b] of [[x0,y0],[x1,y0],[x0,y1],[x1,y1]])box(m,a-w,b-w,z0,a+w,b+w,z1,rgb);
+  outline=upload(m);outline.__keep=1}
+const locked=()=>document.pointerLockElement===canvas||!!globalThis.__FLYTEST; // __FLYTEST: 자동 시험용
+let lastSpace=0,hold=null,holdT=0;
+function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL.t=now;requestAnimationFrame(step);
+  const L=locked(),f=L?((held.w?1:0)-(held.s?1:0)):0,sd=L?((held.d?1:0)-(held.a?1:0)):0,sp=FL.fly?(held.control?21:10.9):(held.control?5.6:4.3);
+  const fx=Math.sin(FL.yaw),fz=-Math.cos(FL.yaw),rx=Math.cos(FL.yaw),rz=Math.sin(FL.yaw);let mx=(fx*f+rx*sd),mz=(fz*f+rz*sd);const ml=Math.hypot(mx,mz);if(ml){mx=mx/ml*sp*dt;mz=mz/ml*sp*dt}
+  // 옆으로: 막히면 그 축만 멈춤. 걷는 중엔 STEP 높이까지는 올라섬(계단)
+  for(const [ax,az] of [[mx,0],[0,mz]]){if(!ax&&!az)continue;const nx=FL.x+ax,nz=FL.z+az;let ny=FL.y;
+    if(!FL.fly){const g=surfAt(nx,nz,FL.y+STEP);if(g>FL.y&&FL.ground)ny=g}
+    if(!blocked(nx,ny,nz)){FL.x=nx;FL.z=nz;FL.y=ny}}
+  const g=surfAt(FL.x,FL.z,FL.y+.05);
+  if(FL.fly){const v=L?((held[' ']?1:0)-(held.shift?1:0)):0;const ny=FL.y+v*8*dt;if(!blocked(FL.x,Math.max(ny,g),FL.z))FL.y=Math.max(ny,g);if(FL.y<=g+.001&&held.shift)FL.fly=false;FL.vy=0;FL.ground=FL.y<=g+.001}
+  else{if(FL.y>g+.001||FL.vy>0){FL.vy-=25*dt;const ny=FL.y+FL.vy*dt;if(FL.vy>0&&blocked(FL.x,ny,FL.z))FL.vy=0;else FL.y=ny;if(FL.y<=g){FL.y=g;FL.vy=0}}else{FL.y=g;FL.vy=0}FL.ground=FL.y<=g+.001}
+  if(FL.y<-200){FL.y=H(FL.x,FL.z);FL.vy=0}
+  camera.mode='walk';camera.pos=[FL.x,0,FL.z];camera.yaw=FL.yaw;camera.pitch=FL.pitch;globalThis.__FLY.y=FL.y+EYE;
+  if(hold&&now-holdT>220){holdT=now;hold==='break'?doBreak():doPlace()}
+  if(now-aimT>60){aimT=now;const p=L?aim():null;if(p&&p.hit==='vox')setOutline(p.cell,[.1,.12,.14]);else if(p&&p.prev)setOutline(p.prev,[.95,.95,.95]);else setOutline(null)}}
+addEventListener('keydown',e=>{if(!FL||!locked())return;const k=e.key.toLowerCase();e.preventDefault();e.stopImmediatePropagation();
+  if(k===' '&&!e.repeat){const now=performance.now();if(now-lastSpace<300){FL.fly=!FL.fly;FL.vy=0;post({event:'fly',flying:FL.fly})}else if(!FL.fly&&FL.ground)FL.vy=7.7;lastSpace=now}
+  if(/^[1-9]$/.test(k)){FL.slot=+k-1;post({event:'fly',slot:FL.slot})}
+  if(k==='e'){document.exitPointerLock();post({event:'fly',menu:'palette'})}
+  held[k]=true},true);
+addEventListener('keyup',e=>{if(!FL)return;held[e.key.toLowerCase()]=false;if(locked()){e.stopImmediatePropagation()}},true);
+addEventListener('blur',()=>{for(const k in held)held[k]=false});
+for(const t of ['pointerdown','pointerup','pointermove','click','dblclick'])canvas.addEventListener(t,e=>{if(!FL)return;e.stopImmediatePropagation();e.preventDefault();
+  if(t==='pointerdown'){if(!locked()){canvas.requestPointerLock();return}if(e.button===0){doBreak();hold='break';holdT=performance.now()}else if(e.button===2){doPlace();hold='place';holdT=performance.now()}else if(e.button===1)doPick()}
+  if(t==='pointerup')hold=null},true);
+canvas.addEventListener('mousemove',e=>{if(!FL||!locked())return;FL.yaw+=e.movementX*.0024;FL.pitch=Math.max(-1.55,Math.min(1.55,FL.pitch-e.movementY*.0024))},true);
+canvas.addEventListener('wheel',e=>{if(!FL||!locked())return;e.preventDefault();e.stopImmediatePropagation();FL.slot=(FL.slot+(e.deltaY>0?1:-1)+FL.slots.length)%FL.slots.length;post({event:'fly',slot:FL.slot})},{capture:true,passive:false});
+document.addEventListener('pointerlockchange',()=>{if(!FL)return;for(const k in held)held[k]=false;hold=null;if(!locked())setOutline(null);post({event:'fly',locked:locked()})});
+function spawn(o){let x=+o.x,z=+o.z,b=null;if(!(isFinite(x)&&isFinite(z))){b=CUKPICK.findB(o.building||'니콜스관');x=b?b.cx:0;z=b?b.cz:0}
+  // 탁 트인 곳 찾기: 반지름 3m 안에 벽·블록이 없고, 머리 위가 비어 있고, 평평한 곳
+  const open=(px,pz)=>{const g=surfAt(px,pz,H(px,pz)+.2);if(surfAt(px,pz,g+30)>g+.6)return false;for(let a=0;a<8;a++){const qx=px+Math.cos(a*.785)*3,qz=pz+Math.sin(a*.785)*3;if(blocked(qx,g,qz)||Math.abs(surfAt(qx,qz,g+.6)-g)>.6)return false}return !blocked(px,g,pz)};
+  let fx=x,fz=z;search:for(let r=16;r<160;r+=2)for(let a=0;a<16;a++){const px=x+Math.cos(a*.3927)*r,pz=z+Math.sin(a*.3927)*r;if(open(px,pz)){fx=px;fz=pz;break search}}
+  const yaw=b?Math.atan2(b.cx-fx,-(b.cz-fz)):0;return [fx,fz,yaw]}
+// 1인칭일 땐 지도 화면의 버튼·작은 지도·속도 막대를 숨긴다(건물 이름표만 남김)
+let HID=[];const cst=document.createElement('style');cst.textContent='body.cukfly #wspd,body.cukfly #mode,body.cukfly #intro{display:none!important}';document.head.appendChild(cst);
+function chrome(hide){document.body.classList.toggle('cukfly',hide);if(hide){HID=[];for(const el of document.body.querySelectorAll('*')){if(el===canvas||el.contains(canvas)||el.closest('#pins,#kpins,#cukcredit')||HID.some(h=>h[0].contains(el)))continue;const cs=getComputedStyle(el);if((cs.position==='absolute'||cs.position==='fixed')&&cs.display!=='none'){HID.push([el,el.style.display]);el.style.display='none'}}}else{for(const [el,d] of HID)el.style.display=d;HID=[]}}
+function voxelFly(o){o=o||{};
+  if(o.on===false){if(FL){FL=null;chrome(false);globalThis.__FLY=null;if(locked())document.exitPointerLock();setOutline(null);const ob=document.getElementById('orbitBtn');if(ob)ob.click()}return {on:false}}
+  if(o.on&&!FL){const [x,z,yw]=spawn(o);chrome(true);FL={x,z,y:surfAt(x,z,H(x,z)+.1),vy:0,yaw:isFinite(+o.yaw)?+o.yaw:yw,pitch:-.15,fly:false,ground:true,slot:0,slots:[{color:'#c0392b'}],t:0};globalThis.__FLY={y:FL.y+EYE};MODE.tool=null;if(ghost){gl.deleteBuffer(ghost.buffer);ghost=null}requestAnimationFrame(step)}
+  if(FL&&o.slots)FL.slots=o.slots.map(s=>s.stamp?{stamp:s.stamp.filter(q=>Array.isArray(q)&&q.length>=4&&okC(q[3])).slice(0,4000),name:s.name}:{color:okC(s.color)?s.color:'#c0392b'});
+  if(FL&&isFinite(+o.slot))FL.slot=Math.max(0,Math.min(FL.slots.length-1,+o.slot|0));
+  return FL?{on:true,x:FL.x,y:FL.y,z:FL.z,slot:FL.slot,flying:FL.fly,locked:locked()}:{on:false}}
+
 function voxelApply(cells){let n=0;for(const q of cells||[]){if(!Array.isArray(q)||!okC(q[3]))continue;const [i,j,k]=q.map(v=>v|0);if(setCell(i,j,k,q[3]))n++}return {count:VOX.size,applied:n}}
 function voxelReset(cells){for(const C of CHUNK.keys())DIRTY.add(C);VOX.clear();CHUNK.clear();return voxelApply(cells)}
 function voxelInfo(){return {count:VOX.size,size:S,max:MAX}}
-Object.assign(globalThis.__KIT||{},{voxelMode,voxelApply,voxelReset,voxelInfo});
+Object.assign(globalThis.__KIT||{},{voxelMode,voxelApply,voxelReset,voxelInfo,voxelFly});
+globalThis.__VOXDBG={surfAt,blocked,get FL(){return FL},aim,doPlace,doBreak};
 })()}
