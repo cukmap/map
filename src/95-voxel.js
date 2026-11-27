@@ -142,6 +142,13 @@ const tr=(m,x,y,z)=>{const w=m[3]*x+m[7]*y+m[11]*z+m[15];return [(m[0]*x+m[4]*y+
 let BB=null;
 function solidB(x,y,z){if(!BB)BB=B.filter(b=>b.poly&&b.poly.length>2&&b.roof>-1e8).map(b=>{const xs=b.poly.map(q=>q[0]),zs=b.poly.map(q=>q[1]);return {b,x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)}});
   for(const o of BB){if(x<o.x0||x>o.x1||z<o.z0||z>o.z1||y>o.b.roof)continue;const P=o.b.poly;let c=false;for(let a=0,d=P.length-1;a<P.length;d=a++){const p=P[a],q=P[d];if((p[1]>z)!==(q[1]>z)&&x<(q[0]-p[0])*(z-p[1])/(q[1]-p[1])+p[0])c=!c}if(c)return true}return false}
+let WP=null;
+function solidW(x,y,z){if(!WP){WP=[];for(const b of B){if(!b.poly||b.poly.length<3)continue;const sp=b.spec;try{
+    if(sp&&sp.parts&&sp.parts.length){const lvl1=sp.datum!=null?sp.datum:Math.min(...b.poly.map(p=>H(p[0],p[1])))+(sp.lift||0);
+      for(const pt of sp.parts){const base=lvl1+(pt.base||0),top=base+pt.height,fh=Math.max(2.8,(pt.height-(pt.parapet>0?pt.parapet:0))/Math.max(1,pt.floors||1)),bot=pt.bottom>0?base+pt.bottom:(pt.pilotis?base+pt.pilotis*fh:-1e9);WP.push({P:pt.poly,bot,top})}}
+    else if(isFinite(b.roof))WP.push({P:b.poly,bot:-1e9,top:b.roof})}catch(e){}}
+    for(const w of WP){const xs=w.P.map(p=>p[0]),zs=w.P.map(p=>p[1]);w.x0=Math.min(...xs);w.x1=Math.max(...xs);w.z0=Math.min(...zs);w.z1=Math.max(...zs)}}
+  for(const w of WP){if(x<w.x0||x>w.x1||z<w.z0||z>w.z1||y>w.top||y<w.bot)continue;const P=w.P;let c=false;for(let a=0,d=P.length-1;a<P.length;d=a++){const p=P[a],q=P[d];if((p[1]>z)!==(q[1]>z)&&x<(q[0]-p[0])*(z-p[1])/(q[1]-p[1])+p[0])c=!c}if(c)return true}return false}
 function pickAt(cx,cy,o){o=o||{};const r=canvas.getBoundingClientRect(),nx=(cx-r.left)/r.width*2-1,ny=1-(cy-r.top)/r.height*2,I=camera.mvp&&inv(camera.mvp);if(!I)return null;
   const a=tr(I,nx,ny,-1),b=tr(I,nx,ny,1);let dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2];const L=Math.hypot(dx,dy,dz);dx/=L;dy/=L;dz/=L;
   const st=.04,max=Math.min(L,o.max||600);let prev=null;
@@ -202,7 +209,7 @@ function surfAt(x,z,yMax){const BW=globalThis.__BW;let h;if(BW){h=BW.top(x,z,yMa
 function onSurf(x,y,z){const g=surfAt(x,z,y+.02);return y<=g+.02&&y>g-.35}
 // 몸이 들어갈 수 없는 곳(건물 안, 블록)
 function blocked(x,y,z){for(const [dx,dz] of [[0,0],[RAD,0],[-RAD,0],[0,RAD],[0,-RAD]]){const px=x+dx,pz=z+dz;
-    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true;const BW=globalThis.__BW;if(BW){if(BW.solid(px,py,pz))return true}else if(WALK&&solidB(px,py,pz))return true}}return false}
+    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true;const BW=globalThis.__BW;if(BW){if(BW.solid(px,py,pz))return true}else if(WALK&&solidW(px,py,pz))return true}}return false}
 let FL=null,WALK=false;const held={};
 function slotItem(){return FL&&FL.slots[FL.slot]||{color:'#c0392b'}}
 function center(){const r=canvas.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
