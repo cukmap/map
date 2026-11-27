@@ -62,6 +62,7 @@ cukmap 지도를 다른 웹사이트에 넣고, 핀을 찍거나 특정 건물·
 | `map.voxelFly({on, building, x, z, slots, slot})` | 1인칭 만들기 모드(마인크래프트 크리에이티브처럼). WASD·마우스(화면을 누르면 마우스 잠금)·스페이스 점프(두 번=날기)·Shift 아래·Ctrl 빨리, 왼쪽 클릭 부수기·오른쪽 클릭 놓기·휠 클릭 색 집기·1~9/휠 칸 바꾸기·E 고르기 창. `slots`: `[{color}|{stamp, name}]` 9칸. 계단·옥상·턱 같은 실제 윗면과 블록 위를 밟아요. 가까운 건물은 25cm 블록(외벽·지붕·바닥, 출입구는 뚫림, 실내 도면이 있으면 층 바닥과 벽)으로 바뀌어 부수고 고칠 수 있어요. 부순 건물 칸은 `'air'`로 저장해요. `{on:false}`로 끝. 이벤트 `fly` `{locked, slot, slots, flying, menu}` |
 | `map.voxelFly({on:true, walk:true, …})` | 걷기 전용: 날기·블록 조작 없이 마인크래프트 조작으로 걷기만. 건물은 원래 모양에 부딪힘. 0.15초마다 `fly` 이벤트로 `{pos:[x,y,z], yaw}` |
 | `map.voxelStamp({id, x, z, y?, rot, cells})` / `map.voxelUnstamp(id)` | 지도 좌표에 작은 블록 모형(예: 고양이)을 놓고 치움. y를 안 주면 그 자리 발밑 높이. rot은 90도 단위(0~3) |
+| `map.blockWorld({on:true, building})` | 학교 전체를 1m 블록으로(마인크래프트처럼): 땅(잔디·길·찻길·계단), 건물(외벽·층마다 창·지붕, 출입구 뚫림), 나무. 원래 지도는 숨김. 주변 190m부터 짓고 걸어가며 계속 지음. 1인칭 걷기는 이 블록을 밟고 부딪히며 한 칸은 저절로 올라섬. 돌려받는 값 `{chunks, built, near}`(near = 주변 60m 남은 덩어리) |
 | `map.showSheets(false)`, `map.showSheets(true, { blank: true })` | 도화지 잠깐 숨기기(원래 모습 보기) / 그림 없는 벽을 흰 도화지로 보이기. 그림의 투명한 부분으로는 원래 벽이 보여요. 입체 보기에서 벽을 누르면 클릭 알림에 `e.sheet`, `e.su`(가로 m), `e.sv`(높이 m) |
 | `map.buildings()` | 건물 목록 `[{ id, code, name, floors, indoor: [층...] }]` |
 | `map.on('click', e => …)` | 지도를 누르면 `e.x`, `e.z`, `e.building`, `e.floor`. 입체 보기에서 건물 벽을 누르면 `e.side`(면), `e.level`(층), `e.col`(세로 줄)도 |

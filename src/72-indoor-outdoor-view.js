@@ -16,7 +16,7 @@ function bTop(b){return b.lv&&b.floors?Math.max(b.roof,b.lv.datum+b.floors*b.lv.
 function eyeBuilding(e){if(!e)return null;for(const b of B){if(!b.poly||b.roof==null)continue;if(e[1]>bTop(b)+.3||e[1]<b.ground-6)continue;if(inside(e[0],e[2],b.poly)&&!(b.holes||[]).some(h=>inside(e[0],e[2],h)))return b}return null}
 const uniTag=document.createElement('div');uniTag.style.cssText='position:absolute;left:16px;bottom:22px;background:#1f3b2ce6;color:#fff;border-radius:12px;padding:8px 12px;font-size:12px;font-weight:700;z-index:31;display:none;max-width:70%';world.appendChild(uniTag);
 const uniBusy=()=>globalThis.__CR&&globalThis.__CR.CR&&globalThis.__CR.CR.phase;
-function uniUpdate(){const e=camera.eye;const walkIn=globalThis.__INW;let b=walkIn?null:eyeBuilding(e);
+function uniUpdate(){const e=camera.eye;const walkIn=globalThis.__INW;let b=(walkIn||globalThis.__FLY)?null:eyeBuilding(e); // 1인칭 놀이(voxelFly)에선 실내 표시 안 함
  if(uniBusy())b=null;
  if(b&&IN.b&&!IN.auto&&IN.b.bv===b)b=null; // 수동 실내 보기 중인 건물은 그쪽 로직 사용
  UNI.b=b;const ib=b?IBbyB.get(b):null;

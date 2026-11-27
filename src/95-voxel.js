@@ -15,6 +15,7 @@ const angOf=P=>{let sx=0,sy=0;for(let a=0;a<P.length;a++){const p=P[a],q=P[(a+1)
 const TH=(()=>{let sx=0,sy=0;for(const b of B)if(b.poly&&b.poly.length>2){const [a,c]=angOf(b.poly);sx+=a;sy+=c}return Math.atan2(sy,sx)/4})(),CO=Math.cos(TH),SI=Math.sin(TH);
 const G=(x,z)=>[x*CO+z*SI,-x*SI+z*CO],W=(gx,gz)=>[gx*CO-gz*SI,gx*SI+gz*CO];
 // 격자 좌표의 점 하나를 지도 좌표로 바꿔 메시에 넣기
+globalThis.__VGRID={G,W,CO,SI,TH};
 function pv(m,gx,y,gz,nx,ny,nz,c){m.push(gx*CO-gz*SI,y,gx*SI+gz*CO,nx*CO-nz*SI,ny,nx*SI+nz*CO,c[0],c[1],c[2],0,0)}
 function setCell(i,j,k,c){const K=key(i,j,k),C=ck(i,j,k);if(c){if(!VOX.has(K)&&VOX.size>=MAX)return false;VOX.set(K,c==='air'?{i,j,k,c,air:true}:{i,j,k,c,rgb:hex(c)});if(!CHUNK.has(C))CHUNK.set(C,new Set());CHUNK.get(C).add(K)}else{VOX.delete(K);const s=CHUNK.get(C);if(s)s.delete(K)}
   DIRTY.add(C);// 이웃 덩어리의 맞닿은 면도 다시
@@ -194,14 +195,14 @@ function surfBuild(){SURF=new Map();const objs=[typeof build!=='undefined'?build
 function freeSrc(all){for(const o of [typeof ter!=='undefined'?ter:null,typeof forest!=='undefined'?forest:null,typeof contour!=='undefined'?contour:null,typeof steepObj!=='undefined'?steepObj:null])if(o)o.src=undefined;
   if(all)for(const o of [typeof build!=='undefined'?build:null,typeof roofObj!=='undefined'?roofObj:null,typeof extObj!=='undefined'?extObj:null,typeof cadObj!=='undefined'?cadObj:null,...(globalThis.__SHX||[])])if(o)o.src=undefined}
 setTimeout(()=>freeSrc(false),8000);
-function surfAt(x,z,yMax){if(!SURF){surfBuild();setTimeout(()=>freeSrc(true),0)}let h=H(x,z);const L=SURF.get(Math.floor(x/BKT)+','+Math.floor(z/BKT));
-  if(L)for(const T of L){const d=(T[5]-T[8])*(T[0]-T[6])+(T[6]-T[3])*(T[2]-T[8]);if(!d)continue;const a=((T[5]-T[8])*(x-T[6])+(T[6]-T[3])*(z-T[8]))/d,b=((T[8]-T[2])*(x-T[6])+(T[0]-T[6])*(z-T[8]))/d,c=1-a-b;if(a<-1e-4||b<-1e-4||c<-1e-4)continue;const y=a*T[1]+b*T[4]+c*T[7];if(y<=yMax+.002&&y>h)h=y}
+function surfAt(x,z,yMax){const BW=globalThis.__BW;let h;if(BW){h=BW.top(x,z,yMax)}else{if(!SURF){surfBuild();setTimeout(()=>freeSrc(true),0)}h=H(x,z);const L=SURF.get(Math.floor(x/BKT)+','+Math.floor(z/BKT));
+  if(L)for(const T of L){const d=(T[5]-T[8])*(T[0]-T[6])+(T[6]-T[3])*(T[2]-T[8]);if(!d)continue;const a=((T[5]-T[8])*(x-T[6])+(T[6]-T[3])*(z-T[8]))/d,b=((T[8]-T[2])*(x-T[6])+(T[0]-T[6])*(z-T[8]))/d,c=1-a-b;if(a<-1e-4||b<-1e-4||c<-1e-4)continue;const y=a*T[1]+b*T[4]+c*T[7];if(y<=yMax+.002&&y>h)h=y}}
   const gg=G(x,z),i=Math.floor(gg[0]/S),k=Math.floor(gg[1]/S);for(let j=Math.floor((yMax+.002)/S),n=0;n<64;j--,n++){if(eff(i,j,k)!=null){const top=(j+1)*S;if(top<=yMax+.002&&top>h)h=top;break}}
   return h}
 function onSurf(x,y,z){const g=surfAt(x,z,y+.02);return y<=g+.02&&y>g-.35}
 // 몸이 들어갈 수 없는 곳(건물 안, 블록)
 function blocked(x,y,z){for(const [dx,dz] of [[0,0],[RAD,0],[-RAD,0],[0,RAD],[0,-RAD]]){const px=x+dx,pz=z+dz;
-    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true;if(WALK&&solidB(px,py,pz))return true}}return false}
+    const gg=G(px,pz),gi=Math.floor(gg[0]/S),gk=Math.floor(gg[1]/S);for(const hy of [.3,1,1.7]){const py=y+hy;if(eff(gi,Math.floor(py/S),gk)!=null)return true;const BW=globalThis.__BW;if(BW){if(BW.solid(px,py,pz))return true}else if(WALK&&solidB(px,py,pz))return true}}return false}
 let FL=null,WALK=false;const held={};
 function slotItem(){return FL&&FL.slots[FL.slot]||{color:'#c0392b'}}
 function center(){const r=canvas.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
@@ -225,7 +226,7 @@ function step(now){if(!FL)return;const dt=Math.min(.1,(now-(FL.t||now))/1000);FL
   const fx=Math.sin(FL.yaw),fz=-Math.cos(FL.yaw),rx=Math.cos(FL.yaw),rz=Math.sin(FL.yaw);let mx=(fx*f+rx*sd),mz=(fz*f+rz*sd);const ml=Math.hypot(mx,mz);if(ml){mx=mx/ml*sp*dt;mz=mz/ml*sp*dt}
   // 옆으로: 막히면 그 축만 멈춤. 걷는 중엔 STEP 높이까지는 올라섬(계단)
   for(const [ax,az] of [[mx,0],[0,mz]]){if(!ax&&!az)continue;const nx=FL.x+ax,nz=FL.z+az;let ny=FL.y;
-    if(!FL.fly){const g=surfAt(nx,nz,FL.y+STEP);if(g>FL.y&&FL.ground)ny=g}
+    if(!FL.fly){const g=surfAt(nx,nz,FL.y+(globalThis.__BW?1.05:STEP));if(g>FL.y&&FL.ground)ny=g}
     if(!blocked(nx,ny,nz)){FL.x=nx;FL.z=nz;FL.y=ny}}
   const g=surfAt(FL.x,FL.z,FL.y+.05);
   if(FL.fly){const v=L?((held[' ']?1:0)-(held.shift?1:0)):0;const ny=FL.y+v*8*dt;if(!blocked(FL.x,Math.max(ny,g),FL.z))FL.y=Math.max(ny,g);if(FL.y<=g+.001&&held.shift)FL.fly=false;FL.vy=0;FL.ground=FL.y<=g+.001}
